@@ -56,6 +56,7 @@ public class DefaultRightsReader implements RightsReader
     @Override
     public List<ReadableSecurityRule> getRules(EntityReference ref, Boolean withImplied)
     {
+        // TODO: see how we should handle SecurityEntryReaderExtra from DefaultSecurityEntryReader#read(ref).
         if (withImplied) {
             SecurityReference reference = securityReferenceFactory.newEntityReference(ref);
             try {
