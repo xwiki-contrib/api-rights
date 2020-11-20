@@ -38,7 +38,7 @@ public class DefaultRightsReader implements RightsReader
 
     /**
      * {@inheritDoc}
-     * 
+     *
      * @see org.xwiki.contrib.rights.RightsReader#getRules(org.xwiki.model.reference.EntityReference, java.lang.Boolean)
      */
     @Override
@@ -50,7 +50,7 @@ public class DefaultRightsReader implements RightsReader
 
     /**
      * {@inheritDoc}
-     * 
+     *
      * @see org.xwiki.contrib.rights.RightsReader#getPersistedRules(org.xwiki.model.reference.EntityReference)
      */
     @Override
@@ -62,7 +62,7 @@ public class DefaultRightsReader implements RightsReader
 
     /**
      * {@inheritDoc}
-     * 
+     *
      * @see org.xwiki.contrib.rights.RightsReader#getActualRules(org.xwiki.model.reference.EntityReference)
      */
     @Override
@@ -71,5 +71,4 @@ public class DefaultRightsReader implements RightsReader
         // TODO Auto-generated method stub
         return null;
     }
-
 }
