@@ -39,14 +39,14 @@ public interface RightsWriter
 {
     /**
      * Creates an empty writable security rule, with state {@link RuleState#ALLOW}.
-     * 
+     *
      * @return an empty writable security rule, to be filled in by the caller.
      */
     WritableSecurityRule createRule();
 
     /**
      * Creates a writable security rule for the given subjects and predicates.
-     * 
+     *
      * @param groups the groups to which the rule applies
      * @param users the users to which the rule applies
      * @param rights the rights concerned by this rule
@@ -58,7 +58,7 @@ public interface RightsWriter
 
     /**
      * Creates a writable security rule that is a copy of the passed readable rule. The copy can be further modified.
-     * 
+     *
      * @param ruleToCopy the readable rule to turn into a writable rule.
      * @return a writable copy of the passed rule.
      */
@@ -67,7 +67,7 @@ public interface RightsWriter
     /**
      * Creates a list of writable security rules that are copies of the passed readable rules. The copies can be further
      * modified.
-     * 
+     *
      * @param rulesToCopy the readable rules to turn into writable rules.
      * @return the list of writable copies of the passed rules.
      */
@@ -78,9 +78,9 @@ public interface RightsWriter
      * place on the passed reference, "What you send is what you get". If you need to add to the existing rules of the
      * reference, use the {@link RightsReader} API to read the existing rules, then turn them into writable ones using
      * {@link RightsWriter#createRules(List)}, add a new rule and then persist them using this function.
-     * 
-     * @param rules the new rules to set for the passed reference. They will replace whatever existing rules are already
-     *            there. Writable rules can also be passed, since they are readable as well.
+     *
+     * @param rules the new rules to set for the passed reference. They will replace whatever existing rules are
+     *     already there. Writable rules can also be passed, since they are readable as well.
      * @param reference the reference to update rules on. Can be a document or a space or a wiki.
      */
     void saveRules(List<ReadableSecurityRule> rules, EntityReference reference);
