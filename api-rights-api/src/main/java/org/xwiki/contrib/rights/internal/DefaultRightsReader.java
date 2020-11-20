@@ -19,14 +19,21 @@
  */
 package org.xwiki.contrib.rights.internal;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
+import javax.inject.Inject;
 import javax.inject.Singleton;
 
 import org.xwiki.component.annotation.Component;
 import org.xwiki.contrib.rights.RightsReader;
 import org.xwiki.model.reference.EntityReference;
+import org.xwiki.security.SecurityReference;
+import org.xwiki.security.SecurityReferenceFactory;
+import org.xwiki.security.authorization.AuthorizationException;
 import org.xwiki.security.authorization.ReadableSecurityRule;
+import org.xwiki.security.authorization.SecurityEntryReader;
 
 /**
  * @version $Id$
@@ -35,6 +42,11 @@ import org.xwiki.security.authorization.ReadableSecurityRule;
 @Singleton
 public class DefaultRightsReader implements RightsReader
 {
+    @Inject
+    private SecurityEntryReader securityEntryReader;
+
+    @Inject
+    private SecurityReferenceFactory securityReferenceFactory;
 
     /**
      * {@inheritDoc}
@@ -44,8 +56,20 @@ public class DefaultRightsReader implements RightsReader
     @Override
     public List<ReadableSecurityRule> getRules(EntityReference ref, Boolean withImplied)
     {
-        // TODO Auto-generated method stub
-        return null;
+        if (withImplied) {
+            SecurityReference reference = securityReferenceFactory.newEntityReference(ref);
+            try {
+                return securityEntryReader.read(reference).getRules().stream()
+                    .filter(k -> k instanceof ReadableSecurityRule)
+                    .map(k -> (ReadableSecurityRule) k)
+                    .collect(Collectors.toList());
+            } catch (AuthorizationException e) {
+                e.printStackTrace();
+            }
+        } else {
+            return getPersistedRules(ref);
+        }
+        return new ArrayList<>();
     }
 
     /**
@@ -56,8 +80,17 @@ public class DefaultRightsReader implements RightsReader
     @Override
     public List<ReadableSecurityRule> getPersistedRules(EntityReference ref)
     {
-        // TODO Auto-generated method stub
-        return null;
+        SecurityReference reference = securityReferenceFactory.newEntityReference(ref);
+        try {
+            return securityEntryReader.read(reference).getRules().stream()
+                .filter(k -> k instanceof ReadableSecurityRule)
+                .filter(k -> ((ReadableSecurityRule) k).isPersisted())
+                .map(k -> (ReadableSecurityRule) k)
+                .collect(Collectors.toList());
+        } catch (AuthorizationException e) {
+            e.printStackTrace();
+        }
+        return new ArrayList<>();
     }
 
     /**
