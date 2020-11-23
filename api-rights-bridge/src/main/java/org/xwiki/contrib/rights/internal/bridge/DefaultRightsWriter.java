@@ -37,7 +37,7 @@ public class DefaultRightsWriter extends AbstractRightsWriter
 {
     /**
      * {@inheritDoc}
-     * 
+     *
      * @see org.xwiki.contrib.rights.RightsWriter#saveRules(java.util.List, org.xwiki.model.reference.EntityReference)
      */
     @Override
@@ -46,5 +46,4 @@ public class DefaultRightsWriter extends AbstractRightsWriter
         // TODO Auto-generated method stub
 
     }
-
 }

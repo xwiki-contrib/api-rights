@@ -36,7 +36,7 @@ public interface RightsReader
 {
     /**
      * Gets the rules that are stored for the passed entity (without inheritance).
-     * 
+     *
      * @param ref the entity reference to get the rules for
      * @param withImplied whether implied rules should also be returned or only persisted rules.
      * @return the list of security rules that apply to the passed entity
@@ -44,8 +44,9 @@ public interface RightsReader
     List<ReadableSecurityRule> getRules(EntityReference ref, Boolean withImplied);
 
     /**
-     * Gets the persisted rules (without the implied rules) that are stored for the passed entity (without inheritance).
-     * 
+     * Gets the persisted rules (without the implied rules) that are stored for the passed entity (without
+     * inheritance).
+     *
      * @param ref the entity reference to get the rules for
      * @return the list of security rules that apply to the passed entity
      */
@@ -53,7 +54,7 @@ public interface RightsReader
 
     /**
      * Gets the rules that apply to the passed entity reference, including the inherited and implied rules.
-     * 
+     *
      * @param ref the reference on which to check rules
      * @return the list of security rules that apply to the passed entity (including inherited and implied rules)
      */

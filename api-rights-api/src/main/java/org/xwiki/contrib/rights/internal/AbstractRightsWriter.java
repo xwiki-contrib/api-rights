@@ -35,10 +35,9 @@ import org.xwiki.security.authorization.RuleState;
  */
 public abstract class AbstractRightsWriter implements RightsWriter
 {
-
     /**
      * {@inheritDoc}
-     * 
+     *
      * @see org.xwiki.contrib.rights.RightsWriter#createRule()
      */
     @Override
@@ -51,9 +50,9 @@ public abstract class AbstractRightsWriter implements RightsWriter
 
     /**
      * {@inheritDoc}
-     * 
+     *
      * @see org.xwiki.contrib.rights.RightsWriter#createRule(java.util.List, java.util.List, java.util.List,
-     *      org.xwiki.security.authorization.RuleState)
+     *     org.xwiki.security.authorization.RuleState)
      */
     @Override
     public WritableSecurityRule createRule(List<DocumentReference> groups, List<DocumentReference> users,
@@ -64,7 +63,7 @@ public abstract class AbstractRightsWriter implements RightsWriter
 
     /**
      * {@inheritDoc}
-     * 
+     *
      * @see org.xwiki.contrib.rights.RightsWriter#createRule(org.xwiki.security.authorization.ReadableSecurityRule)
      */
     @Override
@@ -76,7 +75,7 @@ public abstract class AbstractRightsWriter implements RightsWriter
 
     /**
      * {@inheritDoc}
-     * 
+     *
      * @see org.xwiki.contrib.rights.RightsWriter#createRules(java.util.List)
      */
     @Override
@@ -89,5 +88,4 @@ public abstract class AbstractRightsWriter implements RightsWriter
         }
         return writableRules;
     }
-
 }
