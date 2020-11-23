@@ -45,5 +45,10 @@
       <version>${commons.version}</version>
       <scope>test</scope>
     </dependency>
+    <dependency>
+      <groupId>org.xwiki.platform</groupId>
+      <artifactId>xwiki-platform-security-bridge</artifactId>
+      <version>${platform.version}</version>
+    </dependency>
   </dependencies>
 </project>

@@ -19,6 +19,7 @@
  */
 package org.xwiki.contrib.rights.internal;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import org.xwiki.contrib.rights.RightsWriter;
@@ -26,6 +27,7 @@ import org.xwiki.contrib.rights.WritableSecurityRule;
 import org.xwiki.model.reference.DocumentReference;
 import org.xwiki.security.authorization.ReadableSecurityRule;
 import org.xwiki.security.authorization.Right;
+import org.xwiki.security.authorization.RightSet;
 import org.xwiki.security.authorization.RuleState;
 
 /**
@@ -42,8 +44,9 @@ public abstract class AbstractRightsWriter implements RightsWriter
     @Override
     public WritableSecurityRule createRule()
     {
-        // TODO Auto-generated method stub
-        return null;
+        WritableSecurityRule writableSecurityRule = new WritableSecurityRuleImpl();
+        writableSecurityRule.setState(RuleState.ALLOW);
+        return writableSecurityRule;
     }
 
     /**
@@ -56,8 +59,7 @@ public abstract class AbstractRightsWriter implements RightsWriter
     public WritableSecurityRule createRule(List<DocumentReference> groups, List<DocumentReference> users,
         List<Right> rights, RuleState ruleState)
     {
-        // TODO Auto-generated method stub
-        return null;
+        return new WritableSecurityRuleImpl(groups, users, new RightSet(rights), ruleState);
     }
 
     /**
@@ -68,8 +70,8 @@ public abstract class AbstractRightsWriter implements RightsWriter
     @Override
     public WritableSecurityRule createRule(ReadableSecurityRule ruleToCopy)
     {
-        // TODO Auto-generated method stub
-        return null;
+        return new WritableSecurityRuleImpl(ruleToCopy.getGroups(), ruleToCopy.getUsers(), ruleToCopy.getRights(),
+            ruleToCopy.getState());
     }
 
     /**
@@ -80,8 +82,12 @@ public abstract class AbstractRightsWriter implements RightsWriter
     @Override
     public List<WritableSecurityRule> createRules(List<ReadableSecurityRule> rulesToCopy)
     {
-        // TODO Auto-generated method stub
-        return null;
+        List<WritableSecurityRule> writableRules = new ArrayList<>();
+        for (ReadableSecurityRule rule : rulesToCopy) {
+            writableRules.add(new WritableSecurityRuleImpl(rule.getGroups(), rule.getUsers(), rule.getRights(),
+                rule.getState()));
+        }
+        return writableRules;
     }
 
 }
