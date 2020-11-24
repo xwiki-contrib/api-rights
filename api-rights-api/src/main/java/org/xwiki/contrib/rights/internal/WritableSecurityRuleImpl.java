@@ -19,6 +19,7 @@
  */
 package org.xwiki.contrib.rights.internal;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import org.xwiki.contrib.rights.WritableSecurityRule;
@@ -49,13 +50,17 @@ public class WritableSecurityRuleImpl implements WritableSecurityRule
      */
     public WritableSecurityRuleImpl()
     {
+        groups = new ArrayList<>();
+        users = new ArrayList<>();
+        rights = new RightSet();
+        state = RuleState.ALLOW;
     }
 
     /**
-     * @param groups
-     * @param users
-     * @param rights
-     * @param state
+     * @param groups the groups to which the rule applies
+     * @param users the users to which the rule applies
+     * @param rights the rights concerned by this rule
+     * @param state the state (allow or deny) for this rule. If null, {@link RuleState#ALLOW} should be used.
      */
     public WritableSecurityRuleImpl(List<DocumentReference> groups,
         List<DocumentReference> users, RightSet rights, RuleState state)
@@ -63,7 +68,11 @@ public class WritableSecurityRuleImpl implements WritableSecurityRule
         this.groups = groups;
         this.users = users;
         this.rights = rights;
-        this.state = state;
+        if (null != state) {
+            this.state = state;
+        } else {
+            this.state = RuleState.ALLOW;
+        }
     }
 
     /**
@@ -114,6 +123,11 @@ public class WritableSecurityRuleImpl implements WritableSecurityRule
      */
     @Override public void setState(RuleState state)
     {
+        /**
+         * TODO: this should fallback on {@link RuleState#ALLOW} if the state is null, in order to maintain
+         * the same behavior as the constructor?
+         */
+
         this.state = state;
     }
 

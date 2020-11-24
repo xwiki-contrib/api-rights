@@ -43,9 +43,7 @@ public abstract class AbstractRightsWriter implements RightsWriter
     @Override
     public WritableSecurityRule createRule()
     {
-        WritableSecurityRule writableSecurityRule = new WritableSecurityRuleImpl();
-        writableSecurityRule.setState(RuleState.ALLOW);
-        return writableSecurityRule;
+        return new WritableSecurityRuleImpl();
     }
 
     /**
