@@ -85,5 +85,6 @@ public interface RightsWriter
      *     already there. Writable rules can also be passed, since they are readable as well.
      * @param reference the reference to update rules on. Can be a document or a space or a wiki.
      */
-    void saveRules(List<ReadableSecurityRule> rules, EntityReference reference) throws XWikiException;
+    void saveRules(List<ReadableSecurityRule> rules, EntityReference reference)
+        throws XWikiException, UnsupportedOperationException;
 }

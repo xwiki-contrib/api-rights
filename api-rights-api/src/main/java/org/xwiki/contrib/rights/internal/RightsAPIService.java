@@ -26,11 +26,15 @@ import javax.inject.Named;
 import javax.inject.Singleton;
 
 import org.xwiki.component.annotation.Component;
+import org.xwiki.context.Execution;
 import org.xwiki.contrib.rights.RightsReader;
 import org.xwiki.contrib.rights.RightsWriter;
 import org.xwiki.model.reference.EntityReference;
 import org.xwiki.script.service.ScriptService;
 import org.xwiki.security.authorization.ReadableSecurityRule;
+
+import com.xpn.xwiki.XWikiContext;
+import com.xpn.xwiki.XWikiException;
 
 /**
  * @version $Id: $
@@ -40,6 +44,9 @@ import org.xwiki.security.authorization.ReadableSecurityRule;
 @Singleton
 public class RightsAPIService implements ScriptService
 {
+    @Inject
+    private Execution execution;
+
     @Inject
     private RightsReader rightsReader;
 
@@ -65,5 +72,21 @@ public class RightsAPIService implements ScriptService
     public List<ReadableSecurityRule> getRules(EntityReference ref, Boolean withImplied)
     {
         return rightsReader.getRules(ref, withImplied);
+    }
+
+    public boolean saveRules(List<ReadableSecurityRule> rules, EntityReference reference)
+    {
+        try {
+            rightsWriter.saveRules(rules, reference);
+            return true;
+        } catch (UnsupportedOperationException | XWikiException e) {
+            getXContext().put("message", e.toString());
+        }
+        return false;
+    }
+
+    private XWikiContext getXContext()
+    {
+        return (XWikiContext) execution.getContext().getProperty("xwikicontext");
     }
 }

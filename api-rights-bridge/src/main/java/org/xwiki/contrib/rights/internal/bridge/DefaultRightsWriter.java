@@ -27,6 +27,7 @@ import javax.inject.Singleton;
 import org.xwiki.component.annotation.Component;
 import org.xwiki.context.Execution;
 import org.xwiki.contrib.rights.internal.AbstractRightsWriter;
+import org.xwiki.model.EntityType;
 import org.xwiki.model.reference.DocumentReference;
 import org.xwiki.model.reference.DocumentReferenceResolver;
 import org.xwiki.model.reference.EntityReference;
@@ -61,6 +62,8 @@ public class DefaultRightsWriter extends AbstractRightsWriter
 
     private static final String XWIKI_GLOBAL_RIGHTS = "XWiki.XWikiGlobalRights";
 
+    private static final String XWIKI_WEB_PREFERENCES = "WebPreferences";
+
     @Inject
     private Execution execution;
 
@@ -76,20 +79,24 @@ public class DefaultRightsWriter extends AbstractRightsWriter
      * @see org.xwiki.contrib.rights.RightsWriter#saveRules(java.util.List, org.xwiki.model.reference.EntityReference)
      */
     @Override
-    public void saveRules(List<ReadableSecurityRule> rules, EntityReference reference) throws XWikiException
+    public void saveRules(List<ReadableSecurityRule> rules, EntityReference reference)
+        throws XWikiException, UnsupportedOperationException
     {
         // TODO: drop the existing rules.
         if (null != rules && null != reference) {
             switch (reference.getType()) {
                 case SPACE:
                 case WIKI:
-                    addRulesAsObjects(rules, reference, true);
+                    EntityReference webPreferences = new EntityReference(XWIKI_WEB_PREFERENCES, EntityType.DOCUMENT,
+                        reference);
+                    addRulesAsObjects(rules, webPreferences, true);
                     break;
                 case DOCUMENT:
                     // The current reference corresponds to a terminal page.
                     addRulesAsObjects(rules, reference, false);
-                default:
                     break;
+                default:
+                    throw new UnsupportedOperationException("Could not set rights for the given reference.");
             }
         }
     }
@@ -169,8 +176,8 @@ public class DefaultRightsWriter extends AbstractRightsWriter
                 .toArray(String[]::new)
         );
 
-        object.set("groups", groupsProperty.getValue(), getXContext());
-        object.set("users", usersProperty.getValue(), getXContext());
-        object.set("levels", levelsProperty.getValue(), getXContext());
+        object.set(GROUPS_FIELD_RIGHTS_OBJECT, groupsProperty.getValue(), getXContext());
+        object.set(USERS_FIELD_RIGHTS_OBJECT, usersProperty.getValue(), getXContext());
+        object.set(LEVELS_FIELD_RIGHTS_OBJECT, levelsProperty.getValue(), getXContext());
     }
 }
