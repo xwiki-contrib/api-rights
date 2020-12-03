@@ -19,9 +19,7 @@
  */
 package org.xwiki.contrib.rights.internal.bridge;
 
-import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
 
 import javax.inject.Inject;
 import javax.inject.Singleton;
@@ -41,8 +39,10 @@ import org.xwiki.security.internal.XWikiConstants;
 import com.xpn.xwiki.XWiki;
 import com.xpn.xwiki.XWikiContext;
 import com.xpn.xwiki.XWikiException;
+import com.xpn.xwiki.api.PropertyClass;
+import com.xpn.xwiki.doc.XWikiDocument;
 import com.xpn.xwiki.objects.BaseObject;
-import com.xpn.xwiki.objects.classes.BaseClass;
+import com.xpn.xwiki.objects.BaseProperty;
 
 /**
  * @version $Id$
@@ -51,7 +51,15 @@ import com.xpn.xwiki.objects.classes.BaseClass;
 @Singleton
 public class DefaultRightsWriter extends AbstractRightsWriter
 {
-    private static final String DEFAULT_STRING_DELIMITER = ",";
+    private static final String USERS_FIELD_RIGHTS_OBJECT = "users";
+
+    private static final String GROUPS_FIELD_RIGHTS_OBJECT = "groups";
+
+    private static final String LEVELS_FIELD_RIGHTS_OBJECT = "levels";
+
+    private static final String XWIKI_RIGHTS = "XWiki.XWikiRights";
+
+    private static final String XWIKI_GLOBAL_RIGHTS = "XWiki.XWikiGlobalRights";
 
     @Inject
     private Execution execution;
@@ -64,39 +72,22 @@ public class DefaultRightsWriter extends AbstractRightsWriter
 
     /**
      * One rule will correspond to one right object.
-     * <p>
-     * TODO: is void the right type for return? Any others possibilities? Is there any reason to change it? Maybe the
-     * number of saved rules? Maybe the rules themself (as List<BaseObject>)?
      *
      * @see org.xwiki.contrib.rights.RightsWriter#saveRules(java.util.List, org.xwiki.model.reference.EntityReference)
      */
     @Override
-    public void saveRules(List<ReadableSecurityRule> rules, EntityReference reference)
+    public void saveRules(List<ReadableSecurityRule> rules, EntityReference reference) throws XWikiException
     {
         // TODO: drop the existing rules.
-
-        List<BaseObject> rights = new ArrayList<>();
-        if (null != reference) {
-            for (ReadableSecurityRule rule : rules) {
-                // create object corresponding to the rule
-                try {
-                    BaseObject ruleObject = createRightObjectFromRule(rule);
-                    if (null != ruleObject) {
-                        ruleObject.setOwnerDocument(getXWiki().getDocument(reference, getXContext()));
-                        rights.add(ruleObject);
-                    }
-                } catch (XWikiException e) {
-                    e.printStackTrace();
-                }
-            }
-            // TODO: Save the rights.
+        if (null != rules && null != reference) {
             switch (reference.getType()) {
-                case PAGE:
-                    // TODO:
                 case SPACE:
-                    // TODO: set the rights for the entire space
                 case WIKI:
-                    // TODO: set the rights for the entire wiki
+                    addRulesAsObjects(rules, reference, true);
+                    break;
+                case DOCUMENT:
+                    // The current reference corresponds to a terminal page.
+                    addRulesAsObjects(rules, reference, false);
                 default:
                     break;
             }
@@ -120,44 +111,66 @@ public class DefaultRightsWriter extends AbstractRightsWriter
     }
 
     /**
-     * @param rule for which the BaseObject will be created
-     * @return a BaseObject with XWikiRights XClass, from passed @rule
+     * @param rules containing the actual security rules that will be translated into BaseObjects
+     * @param reference the reference on which the objects will be added
+     * @param isGlobal if true, the created BaseObjects will be of type XWikiGlobalRights. Else, XWikiRights objects
+     *     will be created.
      */
-    private BaseObject createRightObjectFromRule(ReadableSecurityRule rule)
+    private void addRulesAsObjects(List<ReadableSecurityRule> rules, EntityReference reference, boolean isGlobal)
+        throws XWikiException
     {
-        try {
-            DocumentReference rightsClass = documentReferenceResolver.resolve("XWiki.XWikiRights");
-            // TODO: could the context be null? If so, in what situation?
-            BaseObject object = BaseClass.newCustomClassInstance(rightsClass, getXContext());
-            if (null != rule.getState()) {
-                // TODO: this checking won't be anymore necessary after deciding if the state of the rule can be or
-                //  not a null.
-                object.setIntValue(XWikiConstants.ALLOW_FIELD_NAME,
-                    rule.getState().getValue() == RuleState.DENY.getValue() ? 0 : 1);
-            }
-
-            // How to set extra parameters? e.g. multiple select, validation message, use suggest?
-
-            // Do we have a proper manner to handle lists (any kind of: users, rights, levels, groups) in XObjects?
-            // TODO: mention why we do it like this.
-            object.setLargeStringValue("users", rule.getUsers().stream()
-                .map(k -> entityReferenceSerializer.serialize(k))
-                .collect(Collectors.joining(DEFAULT_STRING_DELIMITER))
-            );
-
-            object.setLargeStringValue("groups", rule.getGroups().stream()
-                .map(k -> entityReferenceSerializer.serialize(k))
-                .collect(Collectors.joining(DEFAULT_STRING_DELIMITER))
-            );
-
-            object.setLargeStringValue("levels", rule.getRights().stream()
-                .map(Right::getName)
-                .collect(Collectors.joining(DEFAULT_STRING_DELIMITER))
-            );
-            return object;
-        } catch (XWikiException e) {
-            e.printStackTrace();
+        XWikiDocument doc = getXWiki().getDocument(reference, getXContext());
+        DocumentReference rightsClass;
+        if (isGlobal) {
+            rightsClass = documentReferenceResolver.resolve(XWIKI_GLOBAL_RIGHTS);
+        } else {
+            rightsClass = documentReferenceResolver.resolve(XWIKI_RIGHTS);
         }
-        return null;
+        // TODO: check the saving mechanism, are the objects already saved on the page?
+        for (ReadableSecurityRule rule : rules) {
+            addRightObjectToDocument(rule, doc, rightsClass);
+        }
+        // TODO: do we still need to save the document?
+        // All the objects were added, save the document.
+        // We do so in order to guarantee that either all the rules were saved, either none of them.
+        getXWiki().saveDocument(doc, getXContext());
+    }
+
+    /**
+     * @param rule for which the BaseObject will be created
+     */
+    private void addRightObjectToDocument(ReadableSecurityRule rule, XWikiDocument doc, DocumentReference rightsClass)
+    {
+        BaseObject object = doc.getXObject(rightsClass);
+        if (null != rule.getState()) {
+            // TODO: this checking won't be anymore necessary after deciding if the state of the rule can be or
+            //  not a null.
+            object.setIntValue(XWikiConstants.ALLOW_FIELD_NAME,
+                rule.getState().getValue() == RuleState.DENY.getValue() ? 0 : 1);
+        }
+        PropertyClass groups = (PropertyClass) object.getXClass(getXContext()).get(GROUPS_FIELD_RIGHTS_OBJECT);
+        PropertyClass users = (PropertyClass) object.getXClass(getXContext()).get(USERS_FIELD_RIGHTS_OBJECT);
+        PropertyClass levels = (PropertyClass) object.getXClass(getXContext()).get(LEVELS_FIELD_RIGHTS_OBJECT);
+        BaseProperty<?> groupsProperty = groups.getPropertyClass().fromStringArray(
+            rule.getGroups().stream()
+                .map(k -> entityReferenceSerializer.serialize(k))
+                .toArray(String[]::new)
+        );
+
+        BaseProperty<?> usersProperty = users.getPropertyClass().fromStringArray(
+            rule.getUsers().stream()
+                .map(k -> entityReferenceSerializer.serialize(k))
+                .toArray(String[]::new)
+        );
+
+        BaseProperty<?> levelsProperty = levels.getPropertyClass().fromStringArray(
+            rule.getRights().stream()
+                .map(Right::getName)
+                .toArray(String[]::new)
+        );
+
+        object.set("groups", groupsProperty.getValue(), getXContext());
+        object.set("users", usersProperty.getValue(), getXContext());
+        object.set("levels", levelsProperty.getValue(), getXContext());
     }
 }
