@@ -74,6 +74,12 @@ public class RightsAPIService implements ScriptService
         return rightsReader.getRules(ref, withImplied);
     }
 
+    /**
+     * Saves the passed rules.
+     * @param rules the rules to save.
+     * @param reference the reference to save rules on.
+     * @return whether the save was successful or not.
+     */
     public boolean saveRules(List<ReadableSecurityRule> rules, EntityReference reference)
     {
         try {

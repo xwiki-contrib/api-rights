@@ -22,16 +22,18 @@ package org.xwiki.contrib.rights.internal.bridge;
 import java.util.List;
 
 import javax.inject.Inject;
+import javax.inject.Named;
+import javax.inject.Provider;
 import javax.inject.Singleton;
 
 import org.xwiki.component.annotation.Component;
-import org.xwiki.context.Execution;
 import org.xwiki.contrib.rights.internal.AbstractRightsWriter;
-import org.xwiki.model.EntityType;
 import org.xwiki.model.reference.DocumentReference;
 import org.xwiki.model.reference.DocumentReferenceResolver;
 import org.xwiki.model.reference.EntityReference;
 import org.xwiki.model.reference.EntityReferenceSerializer;
+import org.xwiki.model.reference.SpaceReference;
+import org.xwiki.model.reference.WikiReference;
 import org.xwiki.security.authorization.ReadableSecurityRule;
 import org.xwiki.security.authorization.Right;
 import org.xwiki.security.authorization.RuleState;
@@ -64,10 +66,15 @@ public class DefaultRightsWriter extends AbstractRightsWriter
 
     private static final String XWIKI_WEB_PREFERENCES = "WebPreferences";
 
-    @Inject
-    private Execution execution;
+    private static final String XWIKI_PREFERENCES = "XWikiPreferences";
+
+    private static final String XWIKI_SPACE = "XWiki";
 
     @Inject
+    private Provider<XWikiContext> xcontextProvider;
+
+    @Inject
+    @Named("current")
     private DocumentReferenceResolver<String> documentReferenceResolver;
 
     @Inject
@@ -85,15 +92,17 @@ public class DefaultRightsWriter extends AbstractRightsWriter
         // TODO: drop the existing rules.
         if (null != rules && null != reference) {
             switch (reference.getType()) {
-                case SPACE:
                 case WIKI:
-                    EntityReference webPreferences = new EntityReference(XWIKI_WEB_PREFERENCES, EntityType.DOCUMENT,
-                        reference);
-                    addRulesAsObjects(rules, webPreferences, true);
+                    addRulesAsObjects(rules, new DocumentReference(XWIKI_PREFERENCES,
+                        new SpaceReference(XWIKI_SPACE, new WikiReference(reference))), true);
+                    break;
+                case SPACE:
+                    addRulesAsObjects(rules,
+                        new DocumentReference(XWIKI_WEB_PREFERENCES, new SpaceReference(reference)), true);
                     break;
                 case DOCUMENT:
                     // The current reference corresponds to a terminal page.
-                    addRulesAsObjects(rules, reference, false);
+                    addRulesAsObjects(rules, new DocumentReference(reference), false);
                     break;
                 default:
                     throw new UnsupportedOperationException("Could not set rights for the given reference.");
@@ -106,7 +115,7 @@ public class DefaultRightsWriter extends AbstractRightsWriter
      */
     private XWikiContext getXContext()
     {
-        return (XWikiContext) execution.getContext().getProperty("xwikicontext");
+        return xcontextProvider.get();
     }
 
     /**
@@ -123,7 +132,7 @@ public class DefaultRightsWriter extends AbstractRightsWriter
      * @param isGlobal if true, the created BaseObjects will be of type XWikiGlobalRights. Else, XWikiRights objects
      *     will be created.
      */
-    private void addRulesAsObjects(List<ReadableSecurityRule> rules, EntityReference reference, boolean isGlobal)
+    private void addRulesAsObjects(List<ReadableSecurityRule> rules, DocumentReference reference, boolean isGlobal)
         throws XWikiException
     {
         XWikiDocument doc = getXWiki().getDocument(reference, getXContext());
@@ -135,7 +144,7 @@ public class DefaultRightsWriter extends AbstractRightsWriter
         }
         // TODO: check the saving mechanism, are the objects already saved on the page?
         for (ReadableSecurityRule rule : rules) {
-            addRightObjectToDocument(rule, doc, rightsClass);
+            addRightObjectToDocument(rule, doc, rightsClass, getXContext());
         }
         // TODO: do we still need to save the document?
         // All the objects were added, save the document.
@@ -146,9 +155,10 @@ public class DefaultRightsWriter extends AbstractRightsWriter
     /**
      * @param rule for which the BaseObject will be created
      */
-    private void addRightObjectToDocument(ReadableSecurityRule rule, XWikiDocument doc, DocumentReference rightsClass)
+    private void addRightObjectToDocument(ReadableSecurityRule rule, XWikiDocument doc, DocumentReference rightsClass,
+        XWikiContext context) throws XWikiException
     {
-        BaseObject object = doc.getXObject(rightsClass);
+        BaseObject object = doc.newXObject(rightsClass, context);
         if (null != rule.getState()) {
             // TODO: this checking won't be anymore necessary after deciding if the state of the rule can be or
             //  not a null.
