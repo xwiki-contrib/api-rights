@@ -60,10 +60,10 @@ public class DefaultRightsWriter extends AbstractRightsWriter
     private static final String LEVELS_FIELD_RIGHTS_OBJECT = "levels";
 
     private static final EntityReference XWIKI_RIGHTS_CLASS =
-        new EntityReference("XWiki.XWikiRights", EntityType.DOCUMENT);
+        new EntityReference("XWikiRights", EntityType.DOCUMENT, new EntityReference("XWiki", EntityType.SPACE));
 
-    private static final EntityReference XWIKI_GLOBAL_RIGHTS_CLASS = new EntityReference("XWiki.XWikiGlobalRights",
-        EntityType.DOCUMENT);
+    private static final EntityReference XWIKI_GLOBAL_RIGHTS_CLASS = new EntityReference("XWikiGlobalRights",
+        EntityType.DOCUMENT, new EntityReference("XWiki", EntityType.SPACE));
 
     private static final String XWIKI_WEB_PREFERENCES = "WebPreferences";
 

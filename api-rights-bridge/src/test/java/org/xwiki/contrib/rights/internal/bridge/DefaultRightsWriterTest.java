@@ -31,7 +31,6 @@ import org.xwiki.model.reference.EntityReference;
 import org.xwiki.model.reference.ObjectReference;
 import org.xwiki.security.authorization.Right;
 import org.xwiki.security.authorization.RuleState;
-import org.xwiki.test.junit5.mockito.ComponentTest;
 import org.xwiki.test.junit5.mockito.InjectMockComponents;
 
 import com.xpn.xwiki.XWikiException;
@@ -40,6 +39,7 @@ import com.xpn.xwiki.doc.XWikiDocument;
 import com.xpn.xwiki.test.MockitoOldcore;
 import com.xpn.xwiki.test.junit5.mockito.InjectMockitoOldcore;
 import com.xpn.xwiki.test.junit5.mockito.OldcoreTest;
+import com.xpn.xwiki.test.reference.ReferenceComponentList;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThrows;
@@ -48,7 +48,7 @@ import static org.junit.Assert.assertThrows;
  * @version $Id$
  */
 @OldcoreTest
-@ComponentTest
+@ReferenceComponentList
 class DefaultRightsWriterTest
 {
     @InjectMockitoOldcore
