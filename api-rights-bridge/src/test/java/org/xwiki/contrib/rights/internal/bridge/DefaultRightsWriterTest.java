@@ -22,20 +22,17 @@ package org.xwiki.contrib.rights.internal.bridge;
 import java.util.Arrays;
 import java.util.Collections;
 
-import javax.inject.Named;
-
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.xwiki.contrib.rights.WritableSecurityRule;
 import org.xwiki.contrib.rights.internal.WritableSecurityRuleImpl;
 import org.xwiki.model.reference.DocumentReference;
-import org.xwiki.model.reference.DocumentReferenceResolver;
 import org.xwiki.model.reference.EntityReference;
 import org.xwiki.model.reference.ObjectReference;
 import org.xwiki.security.authorization.Right;
 import org.xwiki.security.authorization.RuleState;
+import org.xwiki.test.junit5.mockito.ComponentTest;
 import org.xwiki.test.junit5.mockito.InjectMockComponents;
-import org.xwiki.test.junit5.mockito.MockComponent;
 
 import com.xpn.xwiki.XWikiException;
 import com.xpn.xwiki.api.Document;
@@ -46,20 +43,16 @@ import com.xpn.xwiki.test.junit5.mockito.OldcoreTest;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThrows;
-import static org.mockito.Mockito.when;
 
 /**
  * @version $Id$
  */
 @OldcoreTest
+@ComponentTest
 class DefaultRightsWriterTest
 {
     @InjectMockitoOldcore
     private MockitoOldcore oldcore;
-
-    @MockComponent
-    @Named("current")
-    private DocumentReferenceResolver<String> documentReferenceResolver;
 
     @InjectMockComponents
     private DefaultRightsWriter rightsWriter;
@@ -67,10 +60,6 @@ class DefaultRightsWriterTest
     @BeforeEach
     void setUp()
     {
-        when(documentReferenceResolver.resolve("XWiki.XWikiRights"))
-            .thenReturn(new DocumentReference("xwiki", "XWiki", "XWikiRights"));
-        when(documentReferenceResolver.resolve("XWiki.XWikiGlobalRights"))
-            .thenReturn(new DocumentReference("xwiki", "XWiki", "XWikiGlobalRights"));
     }
 
     @Test

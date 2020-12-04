@@ -22,14 +22,13 @@ package org.xwiki.contrib.rights.internal.bridge;
 import java.util.List;
 
 import javax.inject.Inject;
-import javax.inject.Named;
 import javax.inject.Provider;
 import javax.inject.Singleton;
 
 import org.xwiki.component.annotation.Component;
 import org.xwiki.contrib.rights.internal.AbstractRightsWriter;
+import org.xwiki.model.EntityType;
 import org.xwiki.model.reference.DocumentReference;
-import org.xwiki.model.reference.DocumentReferenceResolver;
 import org.xwiki.model.reference.EntityReference;
 import org.xwiki.model.reference.EntityReferenceSerializer;
 import org.xwiki.model.reference.SpaceReference;
@@ -60,9 +59,11 @@ public class DefaultRightsWriter extends AbstractRightsWriter
 
     private static final String LEVELS_FIELD_RIGHTS_OBJECT = "levels";
 
-    private static final String XWIKI_RIGHTS = "XWiki.XWikiRights";
+    private static final EntityReference XWIKI_RIGHTS_CLASS =
+        new EntityReference("XWiki.XWikiRights", EntityType.DOCUMENT);
 
-    private static final String XWIKI_GLOBAL_RIGHTS = "XWiki.XWikiGlobalRights";
+    private static final EntityReference XWIKI_GLOBAL_RIGHTS_CLASS = new EntityReference("XWiki.XWikiGlobalRights",
+        EntityType.DOCUMENT);
 
     private static final String XWIKI_WEB_PREFERENCES = "WebPreferences";
 
@@ -72,10 +73,6 @@ public class DefaultRightsWriter extends AbstractRightsWriter
 
     @Inject
     private Provider<XWikiContext> xcontextProvider;
-
-    @Inject
-    @Named("current")
-    private DocumentReferenceResolver<String> documentReferenceResolver;
 
     @Inject
     private EntityReferenceSerializer<String> entityReferenceSerializer;
@@ -136,11 +133,11 @@ public class DefaultRightsWriter extends AbstractRightsWriter
         throws XWikiException
     {
         XWikiDocument doc = getXWiki().getDocument(reference, getXContext());
-        DocumentReference rightsClass;
+        EntityReference rightsClass;
         if (isGlobal) {
-            rightsClass = documentReferenceResolver.resolve(XWIKI_GLOBAL_RIGHTS);
+            rightsClass = XWIKI_GLOBAL_RIGHTS_CLASS;
         } else {
-            rightsClass = documentReferenceResolver.resolve(XWIKI_RIGHTS);
+            rightsClass = XWIKI_RIGHTS_CLASS;
         }
         // TODO: check the saving mechanism, are the objects already saved on the page?
         for (ReadableSecurityRule rule : rules) {
@@ -155,7 +152,7 @@ public class DefaultRightsWriter extends AbstractRightsWriter
     /**
      * @param rule for which the BaseObject will be created
      */
-    private void addRightObjectToDocument(ReadableSecurityRule rule, XWikiDocument doc, DocumentReference rightsClass,
+    private void addRightObjectToDocument(ReadableSecurityRule rule, XWikiDocument doc, EntityReference rightsClass,
         XWikiContext context) throws XWikiException
     {
         BaseObject object = doc.newXObject(rightsClass, context);
