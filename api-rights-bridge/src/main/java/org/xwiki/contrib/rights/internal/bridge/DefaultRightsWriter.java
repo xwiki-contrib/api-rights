@@ -41,10 +41,10 @@ import org.xwiki.security.internal.XWikiConstants;
 import com.xpn.xwiki.XWiki;
 import com.xpn.xwiki.XWikiContext;
 import com.xpn.xwiki.XWikiException;
-import com.xpn.xwiki.api.PropertyClass;
 import com.xpn.xwiki.doc.XWikiDocument;
 import com.xpn.xwiki.objects.BaseObject;
 import com.xpn.xwiki.objects.BaseProperty;
+import com.xpn.xwiki.objects.classes.PropertyClass;
 
 /**
  * @version $Id$
@@ -59,17 +59,17 @@ public class DefaultRightsWriter extends AbstractRightsWriter
 
     private static final String LEVELS_FIELD_RIGHTS_OBJECT = "levels";
 
+    private static final String XWIKI_SPACE = "XWiki";
+
     private static final EntityReference XWIKI_RIGHTS_CLASS =
-        new EntityReference("XWikiRights", EntityType.DOCUMENT, new EntityReference("XWiki", EntityType.SPACE));
+        new EntityReference("XWikiRights", EntityType.DOCUMENT, new EntityReference(XWIKI_SPACE, EntityType.SPACE));
 
     private static final EntityReference XWIKI_GLOBAL_RIGHTS_CLASS = new EntityReference("XWikiGlobalRights",
-        EntityType.DOCUMENT, new EntityReference("XWiki", EntityType.SPACE));
+        EntityType.DOCUMENT, new EntityReference(XWIKI_SPACE, EntityType.SPACE));
 
     private static final String XWIKI_WEB_PREFERENCES = "WebPreferences";
 
     private static final String XWIKI_PREFERENCES = "XWikiPreferences";
-
-    private static final String XWIKI_SPACE = "XWiki";
 
     @Inject
     private Provider<XWikiContext> xcontextProvider;
@@ -165,19 +165,19 @@ public class DefaultRightsWriter extends AbstractRightsWriter
         PropertyClass groups = (PropertyClass) object.getXClass(getXContext()).get(GROUPS_FIELD_RIGHTS_OBJECT);
         PropertyClass users = (PropertyClass) object.getXClass(getXContext()).get(USERS_FIELD_RIGHTS_OBJECT);
         PropertyClass levels = (PropertyClass) object.getXClass(getXContext()).get(LEVELS_FIELD_RIGHTS_OBJECT);
-        BaseProperty<?> groupsProperty = groups.getPropertyClass().fromStringArray(
+        BaseProperty<?> groupsProperty = groups.fromStringArray(
             rule.getGroups().stream()
                 .map(k -> entityReferenceSerializer.serialize(k))
                 .toArray(String[]::new)
         );
 
-        BaseProperty<?> usersProperty = users.getPropertyClass().fromStringArray(
+        BaseProperty<?> usersProperty = users.fromStringArray(
             rule.getUsers().stream()
                 .map(k -> entityReferenceSerializer.serialize(k))
                 .toArray(String[]::new)
         );
 
-        BaseProperty<?> levelsProperty = levels.getPropertyClass().fromStringArray(
+        BaseProperty<?> levelsProperty = levels.fromStringArray(
             rule.getRights().stream()
                 .map(Right::getName)
                 .toArray(String[]::new)

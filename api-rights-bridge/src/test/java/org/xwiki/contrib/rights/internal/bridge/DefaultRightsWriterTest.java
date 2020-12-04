@@ -22,20 +22,30 @@ package org.xwiki.contrib.rights.internal.bridge;
 import java.util.Arrays;
 import java.util.Collections;
 
+import javax.inject.Named;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.xwiki.contrib.rights.WritableSecurityRule;
 import org.xwiki.contrib.rights.internal.WritableSecurityRuleImpl;
+import org.xwiki.job.event.status.JobProgressManager;
+import org.xwiki.localization.ContextualLocalizationManager;
 import org.xwiki.model.reference.DocumentReference;
 import org.xwiki.model.reference.EntityReference;
 import org.xwiki.model.reference.ObjectReference;
+import org.xwiki.observation.ObservationManager;
 import org.xwiki.security.authorization.Right;
 import org.xwiki.security.authorization.RuleState;
+import org.xwiki.sheet.SheetBinder;
+import org.xwiki.test.annotation.ComponentList;
 import org.xwiki.test.junit5.mockito.InjectMockComponents;
+import org.xwiki.test.junit5.mockito.MockComponent;
 
 import com.xpn.xwiki.XWikiException;
 import com.xpn.xwiki.api.Document;
 import com.xpn.xwiki.doc.XWikiDocument;
+import com.xpn.xwiki.internal.mandatory.XWikiGlobalRightsDocumentInitializer;
+import com.xpn.xwiki.internal.mandatory.XWikiRightsDocumentInitializer;
 import com.xpn.xwiki.test.MockitoOldcore;
 import com.xpn.xwiki.test.junit5.mockito.InjectMockitoOldcore;
 import com.xpn.xwiki.test.junit5.mockito.OldcoreTest;
@@ -49,8 +59,29 @@ import static org.junit.Assert.assertThrows;
  */
 @OldcoreTest
 @ReferenceComponentList
+@ComponentList({XWikiGlobalRightsDocumentInitializer.class, XWikiRightsDocumentInitializer.class})
 class DefaultRightsWriterTest
 {
+    /* Mocked for the mockito old core to not fail when trying to initialize the documents */
+    @MockComponent
+    private ObservationManager obsManager;
+
+    /* Mocked for the mockito old core to not fail when trying to initialize the documents */
+    @MockComponent
+    private JobProgressManager jobsProgressManager;
+
+    /* Mocked for the mockito old core to not fail when trying to initialize the documents */
+    @MockComponent
+    private ContextualLocalizationManager localizationManager;
+
+    /*
+     * Mocked for the initializers, they use the sheet binder to check if some specific sheet needs to be bound to the
+     * classes, we don't care so we put an empty mock.
+     */
+    @MockComponent
+    @Named("document")
+    private SheetBinder documentSheetBinder;
+
     @InjectMockitoOldcore
     private MockitoOldcore oldcore;
 
@@ -76,15 +107,20 @@ class DefaultRightsWriterTest
     }
 
     @Test
-    void saveViewRuleOnDocument() throws XWikiException
+    void saveViewRuleOnDocument() throws Exception
     {
+        // this needs to be moved in some "before", I think, but it's not clear if it's a "before all" or "before each"
+        this.oldcore.getSpyXWiki().initializeMandatoryDocuments(this.oldcore.getXWikiContext());
+        // prepare a document to put rights on
         DocumentReference documentReference = new DocumentReference("xwiki", "S", "P");
+        // prepare rules to put on the document
         WritableSecurityRule rule = new WritableSecurityRuleImpl();
         rule.setGroups(Collections.emptyList());
         rule.setUsers(Arrays.asList(new DocumentReference("xwiki", "XWiki", "XWikiAdmin")));
         rule.setState(RuleState.ALLOW);
         rule.setRights(Arrays.asList(Right.VIEW));
 
+        // call the function under test
         this.rightsWriter.saveRules(Arrays.asList(rule), documentReference);
 
         // get the document that was just modified and assert on it
