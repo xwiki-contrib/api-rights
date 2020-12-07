@@ -30,11 +30,14 @@ import org.xwiki.contrib.rights.WritableSecurityRule;
 import org.xwiki.contrib.rights.internal.WritableSecurityRuleImpl;
 import org.xwiki.job.event.status.JobProgressManager;
 import org.xwiki.localization.ContextualLocalizationManager;
+import org.xwiki.model.EntityType;
 import org.xwiki.model.reference.DocumentReference;
 import org.xwiki.model.reference.EntityReference;
 import org.xwiki.model.reference.ObjectReference;
+import org.xwiki.model.reference.WikiReference;
 import org.xwiki.observation.ObservationManager;
 import org.xwiki.security.authorization.Right;
+import org.xwiki.security.authorization.RightSet;
 import org.xwiki.security.authorization.RuleState;
 import org.xwiki.sheet.SheetBinder;
 import org.xwiki.test.annotation.ComponentList;
@@ -59,7 +62,7 @@ import static org.junit.Assert.assertThrows;
  */
 @OldcoreTest
 @ReferenceComponentList
-@ComponentList({XWikiGlobalRightsDocumentInitializer.class, XWikiRightsDocumentInitializer.class})
+@ComponentList({ XWikiGlobalRightsDocumentInitializer.class, XWikiRightsDocumentInitializer.class })
 class DefaultRightsWriterTest
 {
     /* Mocked for the mockito old core to not fail when trying to initialize the documents */
@@ -87,6 +90,14 @@ class DefaultRightsWriterTest
 
     @InjectMockComponents
     private DefaultRightsWriter rightsWriter;
+
+    private static final String XWIKI_SPACE = "XWiki";
+
+    private static final EntityReference XWIKI_RIGHTS_CLASS =
+        new EntityReference("XWikiRights", EntityType.DOCUMENT, new EntityReference(XWIKI_SPACE, EntityType.SPACE));
+
+    private static final EntityReference XWIKI_GLOBAL_RIGHTS_CLASS = new EntityReference("XWikiGlobalRights",
+        EntityType.DOCUMENT, new EntityReference(XWIKI_SPACE, EntityType.SPACE));
 
     @BeforeEach
     void setUp()
@@ -132,5 +143,64 @@ class DefaultRightsWriterTest
         // check that the object is of the good class and has number 0
         assertEquals(1, resultDocEasyAPI.getObjects("XWiki.XWikiRights").size());
         assertEquals(0, resultDocEasyAPI.getObject("XWiki.XWikiRights").getNumber());
+    }
+
+    @Test
+    void replaceExistingRule() throws XWikiException
+    {
+        // this needs to be moved in some "before", I think, but it's not clear if it's a "before all" or "before each"
+        this.oldcore.getSpyXWiki().initializeMandatoryDocuments(this.oldcore.getXWikiContext());
+        // Prepare a document to put rights on.
+        DocumentReference documentReference = new DocumentReference("xwiki", "S", "P");
+        WritableSecurityRule rule = new WritableSecurityRuleImpl();
+        rule.setState(RuleState.DENY);
+
+        this.rightsWriter.saveRules(Collections.singletonList(rule), documentReference);
+
+        XWikiDocument modifiedDocument = this.oldcore.getSpyXWiki().getDocument(documentReference,
+            this.oldcore.getXWikiContext());
+
+        assertEquals(1, modifiedDocument.getXObjects().size());
+        assertEquals(0, modifiedDocument.getXObject(XWIKI_RIGHTS_CLASS).getNumber());
+
+        rule.setState(RuleState.ALLOW);
+        this.rightsWriter.saveRules(Collections.singletonList(rule), documentReference);
+        assertEquals(1, modifiedDocument.getXObjects().size());
+        assertEquals(1, modifiedDocument.getXObject(XWIKI_RIGHTS_CLASS).getNumber());
+    }
+
+    @Test
+    void saveEditRuleOnSpace()
+    {
+
+    }
+
+    /**
+     * Adds an edit rule on the main wiki.
+     */
+    @Test
+    void saveEditRuleOnMainWiki() throws XWikiException
+    {
+        this.oldcore.getSpyXWiki().initializeMandatoryDocuments(this.oldcore.getXWikiContext());
+        WikiReference wikiReference = new WikiReference("xwiki");
+        WritableSecurityRule writableSecurityRule = new WritableSecurityRuleImpl();
+        writableSecurityRule.setGroups(Collections.singletonList(new DocumentReference("xwiki", "XWiki",
+            "XWikiAllGroup")));
+        writableSecurityRule.setRights(new RightSet(Right.EDIT));
+        rightsWriter.saveRules(Collections.singletonList(writableSecurityRule), wikiReference);
+        EntityReference xwikiPreferences = new DocumentReference("xwiki", "XWiki", "XWikiPreferences");
+        XWikiDocument document =
+            this.oldcore.getSpyXWiki().getDocument(xwikiPreferences, this.oldcore.getXWikiContext());
+        assertEquals(1, document.getXObjects(XWIKI_GLOBAL_RIGHTS_CLASS).size());
+        // TODO: assert that the properties are persisted.
+    }
+
+    /**
+     *
+     */
+    @Test
+    void saveDenyEditForUsersOnSubWiki()
+    {
+
     }
 }

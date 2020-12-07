@@ -86,20 +86,26 @@ public class DefaultRightsWriter extends AbstractRightsWriter
     public void saveRules(List<ReadableSecurityRule> rules, EntityReference reference)
         throws XWikiException, UnsupportedOperationException
     {
-        // TODO: drop the existing rules.
+        // By deleting the objects, the object number will continue from the number of the deleted object.
         if (null != rules && null != reference) {
+            DocumentReference documentReference;
             switch (reference.getType()) {
                 case WIKI:
-                    addRulesAsObjects(rules, new DocumentReference(XWIKI_PREFERENCES,
-                        new SpaceReference(XWIKI_SPACE, new WikiReference(reference))), true);
+                    documentReference = new DocumentReference(XWIKI_PREFERENCES, new SpaceReference(XWIKI_SPACE,
+                        new WikiReference(reference)));
+                    clearRightsOnPage(documentReference, true);
+                    addRulesAsObjects(rules, documentReference, true);
                     break;
                 case SPACE:
-                    addRulesAsObjects(rules,
-                        new DocumentReference(XWIKI_WEB_PREFERENCES, new SpaceReference(reference)), true);
+                    documentReference = new DocumentReference(XWIKI_WEB_PREFERENCES, new SpaceReference(reference));
+                    clearRightsOnPage(documentReference, true);
+                    addRulesAsObjects(rules, documentReference, true);
                     break;
                 case DOCUMENT:
                     // The current reference corresponds to a terminal page.
-                    addRulesAsObjects(rules, new DocumentReference(reference), false);
+                    documentReference = new DocumentReference(reference);
+                    clearRightsOnPage(documentReference, false);
+                    addRulesAsObjects(rules, documentReference, false);
                     break;
                 default:
                     throw new UnsupportedOperationException("Could not set rights for the given reference.");
@@ -139,13 +145,10 @@ public class DefaultRightsWriter extends AbstractRightsWriter
         } else {
             rightsClass = XWIKI_RIGHTS_CLASS;
         }
-        // TODO: check the saving mechanism, are the objects already saved on the page?
         for (ReadableSecurityRule rule : rules) {
             addRightObjectToDocument(rule, doc, rightsClass, getXContext());
         }
-        // TODO: do we still need to save the document?
-        // All the objects were added, save the document.
-        // We do so in order to guarantee that either all the rules were saved, either none of them.
+        // All the objects were added, save the document. Either all rules were saved, either none of them.
         getXWiki().saveDocument(doc, getXContext());
     }
 
@@ -186,5 +189,14 @@ public class DefaultRightsWriter extends AbstractRightsWriter
         object.set(GROUPS_FIELD_RIGHTS_OBJECT, groupsProperty.getValue(), getXContext());
         object.set(USERS_FIELD_RIGHTS_OBJECT, usersProperty.getValue(), getXContext());
         object.set(LEVELS_FIELD_RIGHTS_OBJECT, levelsProperty.getValue(), getXContext());
+    }
+
+    private void clearRightsOnPage(DocumentReference reference, boolean areGlobalRights) throws XWikiException
+    {
+        if (areGlobalRights) {
+            getXWiki().getDocument(reference, getXContext()).removeXObjects(XWIKI_GLOBAL_RIGHTS_CLASS);
+        } else {
+            getXWiki().getDocument(reference, getXContext()).removeXObjects(XWIKI_RIGHTS_CLASS);
+        }
     }
 }
