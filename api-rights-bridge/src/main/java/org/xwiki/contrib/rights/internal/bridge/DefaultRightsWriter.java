@@ -168,27 +168,32 @@ public class DefaultRightsWriter extends AbstractRightsWriter
         PropertyClass groups = (PropertyClass) object.getXClass(getXContext()).get(GROUPS_FIELD_RIGHTS_OBJECT);
         PropertyClass users = (PropertyClass) object.getXClass(getXContext()).get(USERS_FIELD_RIGHTS_OBJECT);
         PropertyClass levels = (PropertyClass) object.getXClass(getXContext()).get(LEVELS_FIELD_RIGHTS_OBJECT);
-        BaseProperty<?> groupsProperty = groups.fromStringArray(
-            rule.getGroups().stream()
-                .map(k -> entityReferenceSerializer.serialize(k))
-                .toArray(String[]::new)
-        );
+        if (null != groups) {
+            BaseProperty<?> groupsProperty = groups.fromStringArray(
+                rule.getGroups().stream()
+                    .map(k -> entityReferenceSerializer.serialize(k))
+                    .toArray(String[]::new)
+            );
+            object.set(GROUPS_FIELD_RIGHTS_OBJECT, groupsProperty.getValue(), getXContext());
+        }
 
-        BaseProperty<?> usersProperty = users.fromStringArray(
-            rule.getUsers().stream()
-                .map(k -> entityReferenceSerializer.serialize(k))
-                .toArray(String[]::new)
-        );
+        if (null != users) {
+            BaseProperty<?> usersProperty = users.fromStringArray(
+                rule.getUsers().stream()
+                    .map(k -> entityReferenceSerializer.serialize(k))
+                    .toArray(String[]::new)
+            );
+            object.set(USERS_FIELD_RIGHTS_OBJECT, usersProperty.getValue(), getXContext());
+        }
 
-        BaseProperty<?> levelsProperty = levels.fromStringArray(
-            rule.getRights().stream()
-                .map(Right::getName)
-                .toArray(String[]::new)
-        );
-
-        object.set(GROUPS_FIELD_RIGHTS_OBJECT, groupsProperty.getValue(), getXContext());
-        object.set(USERS_FIELD_RIGHTS_OBJECT, usersProperty.getValue(), getXContext());
-        object.set(LEVELS_FIELD_RIGHTS_OBJECT, levelsProperty.getValue(), getXContext());
+        if (null != levels) {
+            BaseProperty<?> levelsProperty = levels.fromStringArray(
+                rule.getRights().stream()
+                    .map(Right::getName)
+                    .toArray(String[]::new)
+            );
+            object.set(LEVELS_FIELD_RIGHTS_OBJECT, levelsProperty.getValue(), getXContext());
+        }
     }
 
     private void clearRightsOnPage(DocumentReference reference, boolean areGlobalRights) throws XWikiException

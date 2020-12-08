@@ -123,12 +123,11 @@ public class WritableSecurityRuleImpl implements WritableSecurityRule
      */
     @Override public void setState(RuleState state)
     {
-        /**
-         * TODO: this should fallback on {@link RuleState#ALLOW} if the state is null, in order to maintain
-         * the same behavior as the constructor?
-         */
-
-        this.state = state;
+        if (null != state) {
+            this.state = state;
+        } else {
+            this.state = RuleState.ALLOW;
+        }
     }
 
     @Override public List<DocumentReference> getUsers()
