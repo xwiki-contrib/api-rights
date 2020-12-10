@@ -156,12 +156,13 @@ public class DefaultRightsWriter extends AbstractRightsWriter
      * @param rule for which the BaseObject will be created
      */
     private void addRightObjectToDocument(ReadableSecurityRule rule, XWikiDocument doc, EntityReference rightsClass,
-        XWikiContext context) throws XWikiException
+        XWikiContext context) throws XWikiException, IllegalArgumentException
     {
         BaseObject object = doc.newXObject(rightsClass, context);
+        if (null == rule) {
+            throw new IllegalArgumentException("The rule cannot be null.");
+        }
         if (null != rule.getState()) {
-            // TODO: this checking won't be anymore necessary after deciding if the state of the rule can be or
-            //  not a null.
             object.setIntValue(XWikiConstants.ALLOW_FIELD_NAME,
                 rule.getState().getValue() == RuleState.DENY.getValue() ? 0 : 1);
         }

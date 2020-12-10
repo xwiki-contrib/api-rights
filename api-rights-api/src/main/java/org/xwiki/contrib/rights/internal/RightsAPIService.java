@@ -31,7 +31,9 @@ import org.xwiki.contrib.rights.RightsReader;
 import org.xwiki.contrib.rights.RightsWriter;
 import org.xwiki.model.reference.EntityReference;
 import org.xwiki.script.service.ScriptService;
+import org.xwiki.security.authorization.AuthorizationManager;
 import org.xwiki.security.authorization.ReadableSecurityRule;
+import org.xwiki.security.authorization.Right;
 
 import com.xpn.xwiki.XWikiContext;
 import com.xpn.xwiki.XWikiException;
@@ -52,6 +54,9 @@ public class RightsAPIService implements ScriptService
 
     @Inject
     private RightsWriter rightsWriter;
+
+    @Inject
+    private AuthorizationManager authorization;
 
     // TODO: inject a logger & log the operations.
 
@@ -76,17 +81,21 @@ public class RightsAPIService implements ScriptService
 
     /**
      * Saves the passed rules.
+     *
      * @param rules the rules to save.
-     * @param reference the reference to save rules on.
+     * @param reference the reference to save rules on. In order to actually save the rules, the reference must be a
+     *     Document, Space or a Wiki.
      * @return whether the save was successful or not.
      */
     public boolean saveRules(List<ReadableSecurityRule> rules, EntityReference reference)
     {
-        try {
-            rightsWriter.saveRules(rules, reference);
-            return true;
-        } catch (UnsupportedOperationException | XWikiException e) {
-            getXContext().put("message", e.toString());
+        if (authorization.hasAccess(Right.EDIT, getXContext().getUserReference(), reference)) {
+            try {
+                rightsWriter.saveRules(rules, reference);
+                return true;
+            } catch (UnsupportedOperationException | IllegalArgumentException | XWikiException e) {
+                getXContext().put("message", e.toString());
+            }
         }
         return false;
     }
