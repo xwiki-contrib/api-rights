@@ -20,20 +20,24 @@
 package org.xwiki.contrib.rights.internal;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 import javax.inject.Inject;
 import javax.inject.Named;
+import javax.inject.Provider;
 import javax.inject.Singleton;
 
 import org.xwiki.component.annotation.Component;
-import org.xwiki.context.Execution;
 import org.xwiki.contrib.rights.RightsReader;
 import org.xwiki.contrib.rights.RightsWriter;
+import org.xwiki.contrib.rights.WritableSecurityRule;
+import org.xwiki.model.reference.DocumentReferenceResolver;
 import org.xwiki.model.reference.EntityReference;
 import org.xwiki.script.service.ScriptService;
 import org.xwiki.security.authorization.AuthorizationManager;
 import org.xwiki.security.authorization.ReadableSecurityRule;
 import org.xwiki.security.authorization.Right;
+import org.xwiki.security.authorization.RuleState;
 
 import com.xpn.xwiki.XWikiContext;
 import com.xpn.xwiki.XWikiException;
@@ -47,7 +51,7 @@ import com.xpn.xwiki.XWikiException;
 public class RightsAPIService implements ScriptService
 {
     @Inject
-    private Execution execution;
+    private Provider<XWikiContext> xcontextProvider;
 
     @Inject
     private RightsReader rightsReader;
@@ -57,6 +61,9 @@ public class RightsAPIService implements ScriptService
 
     @Inject
     private AuthorizationManager authorization;
+
+    @Inject
+    private DocumentReferenceResolver<String> documentReferenceResolver;
 
     // TODO: inject a logger & log the operations.
 
@@ -70,7 +77,7 @@ public class RightsAPIService implements ScriptService
     }
 
     /**
-     * @param ref
+     * @param ref the reference for which the rules will be retrieved
      * @param withImplied whether implied rules should also be returned or only persisted rules
      * @return the list of security rules that apply to the passed entity
      */
@@ -89,19 +96,69 @@ public class RightsAPIService implements ScriptService
      */
     public boolean saveRules(List<ReadableSecurityRule> rules, EntityReference reference)
     {
-        if (authorization.hasAccess(Right.EDIT, getXContext().getUserReference(), reference)) {
+        if (authorization.hasAccess(Right.EDIT, xcontextProvider.get().getUserReference(), reference)) {
             try {
                 rightsWriter.saveRules(rules, reference);
                 return true;
             } catch (UnsupportedOperationException | IllegalArgumentException | XWikiException e) {
-                getXContext().put("message", e.toString());
+                xcontextProvider.get().put("message", e.toString());
             }
         }
         return false;
     }
 
-    private XWikiContext getXContext()
+    /**
+     * Converts a ReadableSecurityRule to a WritableSecurityRule.
+     *
+     * @param readableSecurityRule a rule to be converted in a modifiable (writable) one
+     * @return a writable rule, with the same properties as the rule passed as argument
+     */
+    public WritableSecurityRule createWritableRule(ReadableSecurityRule readableSecurityRule)
     {
-        return (XWikiContext) execution.getContext().getProperty("xwikicontext");
+        if (null == readableSecurityRule) {
+            xcontextProvider.get().put("message", "The passed securityRule is null.");
+            return null;
+        }
+        return new WritableSecurityRuleImpl(readableSecurityRule.getGroups(),
+            readableSecurityRule.getUsers(), readableSecurityRule.getRights(), readableSecurityRule.getState());
+    }
+
+    /**
+     * @param groups
+     * @param users
+     * @param levels
+     * @param allowOrNot
+     * @return
+     */
+    public WritableSecurityRule createWritableRule(List<String> groups, List<String> users,
+        List<String> levels, String allowOrNot)
+    {
+        WritableSecurityRule writableSecurityRule = new WritableSecurityRuleImpl();
+        if (null != groups) {
+            writableSecurityRule.setGroups(groups.stream()
+                .map(group -> documentReferenceResolver.resolve(group))
+                .collect(Collectors.toList())
+            );
+        }
+
+        if (null != users) {
+            writableSecurityRule.setUsers(users.stream()
+                .map(user -> documentReferenceResolver.resolve(user))
+                .collect(Collectors.toList())
+            );
+        }
+
+        if (null != levels) {
+            writableSecurityRule.setRights(levels.stream()
+                .map(Right::toRight)
+                .collect(Collectors.toList()));
+        }
+
+        if ("ALLOW".equals(allowOrNot.toUpperCase())) {
+            writableSecurityRule.setState(RuleState.ALLOW);
+        } else if ("DENY".equals(allowOrNot.toUpperCase())) {
+            writableSecurityRule.setState(RuleState.DENY);
+        }
+        return writableSecurityRule;
     }
 }
