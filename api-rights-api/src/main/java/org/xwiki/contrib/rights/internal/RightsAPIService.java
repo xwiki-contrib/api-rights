@@ -50,6 +50,8 @@ import com.xpn.xwiki.XWikiException;
 @Singleton
 public class RightsAPIService implements ScriptService
 {
+    private static final String ERROR_MESSAGE = "message";
+
     @Inject
     private Provider<XWikiContext> xcontextProvider;
 
@@ -101,7 +103,7 @@ public class RightsAPIService implements ScriptService
                 rightsWriter.saveRules(rules, reference);
                 return true;
             } catch (UnsupportedOperationException | IllegalArgumentException | XWikiException e) {
-                xcontextProvider.get().put("message", e.toString());
+                xcontextProvider.get().put(ERROR_MESSAGE, e.toString());
             }
         }
         return false;
@@ -116,7 +118,7 @@ public class RightsAPIService implements ScriptService
     public WritableSecurityRule createWritableRule(ReadableSecurityRule readableSecurityRule)
     {
         if (null == readableSecurityRule) {
-            xcontextProvider.get().put("message", "The passed securityRule is null.");
+            xcontextProvider.get().put(ERROR_MESSAGE, "The passed securityRule is null.");
             return null;
         }
         return new WritableSecurityRuleImpl(readableSecurityRule.getGroups(),
@@ -128,7 +130,7 @@ public class RightsAPIService implements ScriptService
      * @param users
      * @param levels
      * @param allowOrNot
-     * @return
+     * @return a writable/modifiable rule, according to the given parameters
      */
     public WritableSecurityRule createWritableRule(List<String> groups, List<String> users,
         List<String> levels, String allowOrNot)
