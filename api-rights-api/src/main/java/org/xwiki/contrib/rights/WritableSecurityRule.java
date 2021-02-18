@@ -22,51 +22,51 @@ package org.xwiki.contrib.rights;
 import java.util.List;
 
 import org.xwiki.model.reference.DocumentReference;
-import org.xwiki.security.authorization.ReadableSecurityRule;
 import org.xwiki.security.authorization.Right;
 import org.xwiki.security.authorization.RightSet;
 import org.xwiki.security.authorization.RuleState;
+import org.xwki.security.authorization.ReadableSecurityRule;
 
 /**
  * A writable security rule, on which the groups, users, rights and state can be set. Extends readable security rule, so
  * that operations on this type are read-write.
- * 
+ *
  * @version $Id$
  */
 public interface WritableSecurityRule extends ReadableSecurityRule
 {
     /**
      * Sets the groups of this rule. Set null or empty list to reset to empty.
-     * 
+     *
      * @param groups references of groups to set
      */
     void setGroups(List<DocumentReference> groups);
 
     /**
      * Sets the groups of this rule. Set null or empty list to reset to empty.
-     * 
+     *
      * @param users references of users to set
      */
     void setUsers(List<DocumentReference> users);
 
     /**
      * Sets the rights of this rule, as a list of Right instances.
-     * 
+     *
      * @param rights the rights list
      */
     void setRights(List<Right> rights);
 
     /**
      * Sets the rights of this rule, as a RightSet.
-     * 
+     *
      * @param rights the right set instance containing the rights.
      */
     void setRights(RightSet rights);
 
     /**
-     * Sets the rule state, allow or deny. If nothing is set, the default returned by the writable rule should be
-     * {@link RuleState#ALLOW}.
-     * 
+     * Sets the rule state, allow or deny. If nothing is set, the default returned by the writable rule should be {@link
+     * RuleState#ALLOW}.
+     *
      * @param state the state of this rule.
      */
     void setState(RuleState state);

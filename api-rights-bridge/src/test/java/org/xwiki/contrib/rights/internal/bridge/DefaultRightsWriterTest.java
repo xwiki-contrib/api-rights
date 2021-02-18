@@ -34,7 +34,6 @@ import org.xwiki.localization.ContextualLocalizationManager;
 import org.xwiki.model.EntityType;
 import org.xwiki.model.reference.DocumentReference;
 import org.xwiki.model.reference.EntityReference;
-import org.xwiki.model.reference.EntityReferenceSerializer;
 import org.xwiki.model.reference.ObjectReference;
 import org.xwiki.model.reference.SpaceReference;
 import org.xwiki.model.reference.WikiReference;
@@ -75,6 +74,16 @@ import static org.junit.Assert.assertThrows;
 @ComponentList({ XWikiGlobalRightsDocumentInitializer.class, XWikiRightsDocumentInitializer.class })
 class DefaultRightsWriterTest
 {
+    private static final String XWIKI_SPACE = "XWiki";
+
+    private static final String XWIKI_WEB_PREFERENCES = "WebPreferences";
+
+    private static final EntityReference XWIKI_RIGHTS_CLASS =
+        new EntityReference("XWikiRights", EntityType.DOCUMENT, new EntityReference(XWIKI_SPACE, EntityType.SPACE));
+
+    private static final EntityReference XWIKI_GLOBAL_RIGHTS_CLASS = new EntityReference("XWikiGlobalRights",
+        EntityType.DOCUMENT, new EntityReference(XWIKI_SPACE, EntityType.SPACE));
+
     /* Mocked for the mockito old core to not fail when trying to initialize the documents */
     @MockComponent
     private ObservationManager obsManager;
@@ -100,16 +109,6 @@ class DefaultRightsWriterTest
 
     @InjectMockComponents
     private DefaultRightsWriter rightsWriter;
-
-    private static final String XWIKI_SPACE = "XWiki";
-
-    private static final String XWIKI_WEB_PREFERENCES = "WebPreferences";
-
-    private static final EntityReference XWIKI_RIGHTS_CLASS =
-        new EntityReference("XWikiRights", EntityType.DOCUMENT, new EntityReference(XWIKI_SPACE, EntityType.SPACE));
-
-    private static final EntityReference XWIKI_GLOBAL_RIGHTS_CLASS = new EntityReference("XWikiGlobalRights",
-        EntityType.DOCUMENT, new EntityReference(XWIKI_SPACE, EntityType.SPACE));
 
     @BeforeEach
     void setUp()

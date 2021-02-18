@@ -24,6 +24,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 import javax.inject.Inject;
+import javax.inject.Named;
 import javax.inject.Singleton;
 
 import org.xwiki.component.annotation.Component;
@@ -32,8 +33,8 @@ import org.xwiki.model.reference.EntityReference;
 import org.xwiki.security.SecurityReference;
 import org.xwiki.security.SecurityReferenceFactory;
 import org.xwiki.security.authorization.AuthorizationException;
-import org.xwiki.security.authorization.ReadableSecurityRule;
 import org.xwiki.security.authorization.SecurityEntryReader;
+import org.xwki.security.authorization.ReadableSecurityRule;
 
 /**
  * @version $Id$
@@ -43,6 +44,7 @@ import org.xwiki.security.authorization.SecurityEntryReader;
 public class DefaultRightsReader implements RightsReader
 {
     @Inject
+    @Named("api-rights")
     private SecurityEntryReader securityEntryReader;
 
     @Inject
