@@ -33,7 +33,7 @@ import org.xwiki.model.reference.DocumentReference;
  * An improved version of SecurityRule, for which we can access groups, users, rights. Also, it provides support to
  * check if the rule is persisted.
  *
- * @version $Id: 74a6491a0587039a75ea967f80563d6a26554bfd $
+ * @version $Id$
  */
 public interface ReadableSecurityRule extends SecurityRule
 {

@@ -59,10 +59,14 @@ import com.xpn.xwiki.doc.XWikiDocument;
 import com.xpn.xwiki.objects.BaseObject;
 
 /**
- * The default implementation of the security rules reader, which reads rules from documents in a wiki.
+ * An implementation of the security entry reader, which reads rules from documents in a wiki. This class is copied from
+ * {@link org.xwiki.security.authorization.internal.DefaultSecurityEntryReader} in version b8adacfb1a523598897c9c6483709f1ba490231b.
+ * What differs is that it's located in a different package and it will use {@link XWikiSecurityRule} from current
+ * module, instead of {@link org.xwiki.security.authorization.internal.XWikiSecurityRule}, originated from the
+ * platform.
  *
- * @version $Id: b8adacfb1a523598897c9c6483709f1ba490231b $
- * @since 4.0M2
+ * @version $Id$
+ * @since 1.0-SNAPSHOT
  */
 @Unstable
 @Component

@@ -47,10 +47,11 @@ import com.xpn.xwiki.objects.classes.UsersClass;
 
 /**
  * Wrapper around xwiki rights objects to convert them into security rules.
- * TODO: do we need to change @version & @since tags since there's not the original one from the platform?
  *
- * @version $Id: 2a235705f6b0144820af3fd8cd9b9366c63feff7 $
- * @since 4.0M2
+ * This class is copied from {@link org.xwiki.security.authorization.internal.XWikiSecurityRule} at version
+ * 2a235705f6b0144820af3fd8cd9b9366c63feff7 and modified in order to implement
+ * {@link org.xwiki.security.authorization.ReadableSecurityRule}.
+ * @version $Id$
  */
 public class XWikiSecurityRule implements ReadableSecurityRule
 {
