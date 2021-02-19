@@ -25,10 +25,10 @@ import java.util.List;
 import org.xwiki.contrib.rights.RightsWriter;
 import org.xwiki.contrib.rights.WritableSecurityRule;
 import org.xwiki.model.reference.DocumentReference;
+import org.xwiki.security.authorization.ReadableSecurityRule;
 import org.xwiki.security.authorization.Right;
 import org.xwiki.security.authorization.RightSet;
 import org.xwiki.security.authorization.RuleState;
-import org.xwiki.security.authorization.ReadableSecurityRule;
 
 /**
  * @version $Id$

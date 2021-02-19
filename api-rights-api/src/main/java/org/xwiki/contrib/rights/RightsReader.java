@@ -23,8 +23,8 @@ import java.util.List;
 
 import org.xwiki.component.annotation.Role;
 import org.xwiki.model.reference.EntityReference;
-import org.xwiki.stability.Unstable;
 import org.xwiki.security.authorization.ReadableSecurityRule;
+import org.xwiki.stability.Unstable;
 
 /**
  * @version $Id$

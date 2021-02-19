@@ -75,14 +75,9 @@ public class WritableSecurityRuleImpl implements WritableSecurityRule
         }
     }
 
-    /**
-     * Sets the groups of this rule. Set null or empty list to reset to empty.
-     *
-     * @param groups references of groups to set
-     */
-    @Override public void setGroups(List<DocumentReference> groups)
+    @Override public List<DocumentReference> getUsers()
     {
-        this.groups = groups;
+        return users;
     }
 
     /**
@@ -93,6 +88,26 @@ public class WritableSecurityRuleImpl implements WritableSecurityRule
     @Override public void setUsers(List<DocumentReference> users)
     {
         this.users = users;
+    }
+
+    @Override public List<DocumentReference> getGroups()
+    {
+        return groups;
+    }
+
+    /**
+     * Sets the groups of this rule. Set null or empty list to reset to empty.
+     *
+     * @param groups references of groups to set
+     */
+    @Override public void setGroups(List<DocumentReference> groups)
+    {
+        this.groups = groups;
+    }
+
+    @Override public RightSet getRights()
+    {
+        return rights;
     }
 
     /**
@@ -113,36 +128,6 @@ public class WritableSecurityRuleImpl implements WritableSecurityRule
     @Override public void setRights(RightSet rights)
     {
         this.rights = new RightSet(rights);
-    }
-
-    /**
-     * Sets the rule state, allow or deny. If nothing is set, the default returned by the writable rule should be {@link
-     * RuleState#ALLOW}.
-     *
-     * @param state the state of this rule.
-     */
-    @Override public void setState(RuleState state)
-    {
-        if (null != state) {
-            this.state = state;
-        } else {
-            this.state = RuleState.ALLOW;
-        }
-    }
-
-    @Override public List<DocumentReference> getUsers()
-    {
-        return users;
-    }
-
-    @Override public List<DocumentReference> getGroups()
-    {
-        return groups;
-    }
-
-    @Override public RightSet getRights()
-    {
-        return rights;
     }
 
     @Override public boolean isPersisted()
@@ -169,5 +154,20 @@ public class WritableSecurityRuleImpl implements WritableSecurityRule
     @Override public RuleState getState()
     {
         return state;
+    }
+
+    /**
+     * Sets the rule state, allow or deny. If nothing is set, the default returned by the writable rule should be {@link
+     * RuleState#ALLOW}.
+     *
+     * @param state the state of this rule.
+     */
+    @Override public void setState(RuleState state)
+    {
+        if (null != state) {
+            this.state = state;
+        } else {
+            this.state = RuleState.ALLOW;
+        }
     }
 }

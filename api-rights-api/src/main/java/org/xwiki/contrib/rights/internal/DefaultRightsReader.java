@@ -33,8 +33,8 @@ import org.xwiki.model.reference.EntityReference;
 import org.xwiki.security.SecurityReference;
 import org.xwiki.security.SecurityReferenceFactory;
 import org.xwiki.security.authorization.AuthorizationException;
-import org.xwiki.security.authorization.SecurityEntryReader;
 import org.xwiki.security.authorization.ReadableSecurityRule;
+import org.xwiki.security.authorization.SecurityEntryReader;
 
 /**
  * @version $Id$

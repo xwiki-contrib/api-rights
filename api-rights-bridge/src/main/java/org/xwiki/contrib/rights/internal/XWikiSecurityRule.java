@@ -32,13 +32,13 @@ import org.xwiki.model.reference.DocumentReferenceResolver;
 import org.xwiki.model.reference.WikiReference;
 import org.xwiki.security.GroupSecurityReference;
 import org.xwiki.security.UserSecurityReference;
+import org.xwiki.security.authorization.ReadableSecurityRule;
 import org.xwiki.security.authorization.Right;
 import org.xwiki.security.authorization.RightSet;
 import org.xwiki.security.authorization.RuleState;
 import org.xwiki.security.authorization.SecurityRule;
 import org.xwiki.security.internal.XWikiConstants;
 import org.xwiki.text.XWikiToStringStyle;
-import org.xwiki.security.authorization.ReadableSecurityRule;
 
 import com.xpn.xwiki.objects.BaseObject;
 import com.xpn.xwiki.objects.classes.GroupsClass;
@@ -47,10 +47,11 @@ import com.xpn.xwiki.objects.classes.UsersClass;
 
 /**
  * Wrapper around xwiki rights objects to convert them into security rules.
- *
+ * <p>
  * This class is copied from {@link org.xwiki.security.authorization.internal.XWikiSecurityRule} at version
- * 2a235705f6b0144820af3fd8cd9b9366c63feff7 and modified in order to implement
- * {@link org.xwiki.security.authorization.ReadableSecurityRule}.
+ * 2a235705f6b0144820af3fd8cd9b9366c63feff7 and modified in order to implement {@link
+ * org.xwiki.security.authorization.ReadableSecurityRule}.
+ *
  * @version $Id$
  */
 public class XWikiSecurityRule implements ReadableSecurityRule
