@@ -25,7 +25,7 @@ import org.xwiki.model.reference.DocumentReference;
 import org.xwiki.security.authorization.Right;
 import org.xwiki.security.authorization.RightSet;
 import org.xwiki.security.authorization.RuleState;
-import org.xwki.security.authorization.ReadableSecurityRule;
+import org.xwiki.security.authorization.ReadableSecurityRule;
 
 /**
  * A writable security rule, on which the groups, users, rights and state can be set. Extends readable security rule, so

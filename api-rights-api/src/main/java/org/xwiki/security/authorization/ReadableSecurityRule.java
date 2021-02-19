@@ -23,13 +23,11 @@
  * Use this package for the eventual case in which this interface will be patched in the platform; and then we can
  * get rid of this interface.
  */
-package org.xwki.security.authorization;
+package org.xwiki.security.authorization;
 
 import java.util.List;
 
 import org.xwiki.model.reference.DocumentReference;
-import org.xwiki.security.authorization.RightSet;
-import org.xwiki.security.authorization.SecurityRule;
 
 /**
  * An improved version of SecurityRule, for which we can access groups, users, rights. Also, it provides support to

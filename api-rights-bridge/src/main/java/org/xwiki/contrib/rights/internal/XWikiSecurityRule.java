@@ -38,7 +38,7 @@ import org.xwiki.security.authorization.RuleState;
 import org.xwiki.security.authorization.SecurityRule;
 import org.xwiki.security.internal.XWikiConstants;
 import org.xwiki.text.XWikiToStringStyle;
-import org.xwki.security.authorization.ReadableSecurityRule;
+import org.xwiki.security.authorization.ReadableSecurityRule;
 
 import com.xpn.xwiki.objects.BaseObject;
 import com.xpn.xwiki.objects.classes.GroupsClass;

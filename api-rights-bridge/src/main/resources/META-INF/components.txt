@@ -1,2 +1,2 @@
-org.xwiki.contrib.rights.internal.bridge.DefaultRightsWriter
+org.xwiki.contrib.rights.internal.DefaultRightsWriter
 org.xwiki.contrib.rights.internal.DefaultSecurityEntryReader

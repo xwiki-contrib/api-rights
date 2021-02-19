@@ -24,7 +24,7 @@ import java.util.List;
 import org.xwiki.component.annotation.Role;
 import org.xwiki.model.reference.EntityReference;
 import org.xwiki.stability.Unstable;
-import org.xwki.security.authorization.ReadableSecurityRule;
+import org.xwiki.security.authorization.ReadableSecurityRule;
 
 /**
  * @version $Id$

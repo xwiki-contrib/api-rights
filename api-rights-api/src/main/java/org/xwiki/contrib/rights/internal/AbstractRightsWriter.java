@@ -28,7 +28,7 @@ import org.xwiki.model.reference.DocumentReference;
 import org.xwiki.security.authorization.Right;
 import org.xwiki.security.authorization.RightSet;
 import org.xwiki.security.authorization.RuleState;
-import org.xwki.security.authorization.ReadableSecurityRule;
+import org.xwiki.security.authorization.ReadableSecurityRule;
 
 /**
  * @version $Id$

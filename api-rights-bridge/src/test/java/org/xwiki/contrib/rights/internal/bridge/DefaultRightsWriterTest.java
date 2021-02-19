@@ -28,6 +28,7 @@ import javax.inject.Named;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.xwiki.contrib.rights.WritableSecurityRule;
+import org.xwiki.contrib.rights.internal.DefaultRightsWriter;
 import org.xwiki.contrib.rights.internal.WritableSecurityRuleImpl;
 import org.xwiki.job.event.status.JobProgressManager;
 import org.xwiki.localization.ContextualLocalizationManager;
