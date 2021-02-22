@@ -26,7 +26,7 @@
   <parent>
     <groupId>org.xwiki.contrib</groupId>
     <artifactId>parent-platform</artifactId>
-    <version>12.6.4</version>
+    <version>12.10</version>
   </parent>
   <artifactId>api-rights</artifactId>
   <version>1.0-SNAPSHOT</version>
@@ -62,9 +62,8 @@
   <properties>
     <xwiki.release.jira.skip>false</xwiki.release.jira.skip>
     <xwiki.issueManagement.jira.id>XAP</xwiki.issueManagement.jira.id>
-    <!-- to be removed when 12.10 is release -->
-    <commons.version>12.10-SNAPSHOT</commons.version>
-    <platform.version>12.10-SNAPSHOT</platform.version>
+    <commons.version>12.10.4</commons.version>
+    <platform.version>12.10.4</platform.version>
     <xwiki.enforcer.skip>true</xwiki.enforcer.skip>
   </properties>
   <dependencies>
@@ -72,12 +71,6 @@
       <groupId>org.xwiki.commons</groupId>
       <artifactId>xwiki-commons-component-api</artifactId>
       <version>${commons.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>org.xwiki.commons</groupId>
-      <artifactId>xwiki-commons-tool-test-component</artifactId>
-      <version>${commons.version}</version>
-      <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>org.apache.commons</groupId>
