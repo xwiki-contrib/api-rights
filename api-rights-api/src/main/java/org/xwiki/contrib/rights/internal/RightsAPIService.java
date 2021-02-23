@@ -70,8 +70,10 @@ public class RightsAPIService implements ScriptService
     // TODO: inject a logger & log the operations.
 
     /**
-     * @param ref
-     * @return the list with the rules that are actually applying for @ref.
+     * @param ref the {@link EntityReference} for which the rules will be retrieved. Depending on the {@link
+     *     org.xwiki.model.EntityType} of the <code>ref</code>, the rules will be read from the wiki, space or
+     *     document.
+     * @return the list of rules that are actually applying for <code>ref</code>.
      */
     public List<ReadableSecurityRule> getActualRules(EntityReference ref)
     {
@@ -79,7 +81,9 @@ public class RightsAPIService implements ScriptService
     }
 
     /**
-     * @param ref the reference for which the rules will be retrieved
+     * @param ref the {@link EntityReference} for which the rules will be retrieved. Depending on the {@link
+     *     org.xwiki.model.EntityType} of the <code>ref</code>, the rules will be read from the wiki, space or
+     *     document.
      * @param withImplied whether implied rules should also be returned or only persisted rules
      * @return the list of security rules that apply to the passed entity
      */
