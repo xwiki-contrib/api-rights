@@ -121,8 +121,7 @@ public class RightsAPIService implements ScriptService
             xcontextProvider.get().put(ERROR_MESSAGE, "The passed securityRule is null.");
             return null;
         }
-        return new WritableSecurityRuleImpl(readableSecurityRule.getGroups(),
-            readableSecurityRule.getUsers(), readableSecurityRule.getRights(), readableSecurityRule.getState());
+        return new WritableSecurityRuleImpl(readableSecurityRule);
     }
 
     /**
