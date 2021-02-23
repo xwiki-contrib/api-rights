@@ -38,16 +38,19 @@ import org.xwiki.security.authorization.AuthorizationManager;
 import org.xwiki.security.authorization.ReadableSecurityRule;
 import org.xwiki.security.authorization.Right;
 import org.xwiki.security.authorization.RuleState;
+import org.xwiki.stability.Unstable;
 
 import com.xpn.xwiki.XWikiContext;
 import com.xpn.xwiki.XWikiException;
 
 /**
  * @version $Id: $
+ * @since 1.0-SNAPSHOT
  */
 @Component
-@Named("rights")
+@Named("security.rights")
 @Singleton
+@Unstable
 public class RightsAPIService implements ScriptService
 {
     private static final String ERROR_MESSAGE = "message";
