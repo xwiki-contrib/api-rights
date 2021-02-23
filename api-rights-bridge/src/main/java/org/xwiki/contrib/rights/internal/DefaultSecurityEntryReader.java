@@ -257,7 +257,8 @@ public class DefaultSecurityEntryReader implements SecurityEntryReader
                     try {
                         // Thanks to the resolver, the users and groups listed by the rights object, inherit
                         // the wiki from the document, unless explicitly given.
-                        // By default, the returned rule is marked as persisted.
+                        // By default, the returned rule is marked as persisted (since it's coming from the current
+                        // BaseObject)
                         rule = XWikiSecurityRule.createNewRule(obj, resolver, wikiReference,
                             isGlobalRightsReference && !isGlobalRightRequested);
                     } catch (IllegalArgumentException e) {
@@ -317,6 +318,7 @@ public class DefaultSecurityEntryReader implements SecurityEntryReader
             XWikiContext context = getXWikiContext();
 
             // Allow global rights to wiki owner
+            // The rules will be marked as not persisted, since they're implied / are not coming from
             if (context.isMainWiki(documentWiki.getName())) {
                 rules.add(
                     new XWikiSecurityRule(MAINWIKIOWNER_RIGHTS, RuleState.ALLOW, Collections.singleton(owner), null));

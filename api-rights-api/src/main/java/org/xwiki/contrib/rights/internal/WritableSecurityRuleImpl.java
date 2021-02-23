@@ -26,6 +26,7 @@ import org.xwiki.contrib.rights.WritableSecurityRule;
 import org.xwiki.model.reference.DocumentReference;
 import org.xwiki.security.GroupSecurityReference;
 import org.xwiki.security.UserSecurityReference;
+import org.xwiki.security.authorization.ReadableSecurityRule;
 import org.xwiki.security.authorization.Right;
 import org.xwiki.security.authorization.RightSet;
 import org.xwiki.security.authorization.RuleState;
@@ -37,6 +38,15 @@ import org.xwiki.security.authorization.RuleState;
  */
 public class WritableSecurityRuleImpl implements WritableSecurityRule
 {
+    /**
+     * By default, a {@link WritableSecurityRuleImpl} is marked as not persisted (even if it will be persisted in an
+     * object at some point in time), so this flag will be set to false. However, if the current {@link
+     * WritableSecurityRule} is created from a {@link ReadableSecurityRule} (maybe using {@link
+     * WritableSecurityRuleImpl#WritableSecurityRuleImpl(ReadableSecurityRule)}), this field's value will be copied from
+     * the given {@link ReadableSecurityRule}.
+     */
+    private final boolean isPersisted;
+
     private List<DocumentReference> groups;
 
     private List<DocumentReference> users;
@@ -46,17 +56,17 @@ public class WritableSecurityRuleImpl implements WritableSecurityRule
     private RuleState state;
 
     /**
-     *
+     * Creates a rule with no users, groups or rights. The rule is marked as not persisted.
      */
     public WritableSecurityRuleImpl()
     {
-        groups = new ArrayList<>();
-        users = new ArrayList<>();
-        rights = new RightSet();
-        state = RuleState.ALLOW;
+        this(new ArrayList<>(), new ArrayList<>(), new RightSet(), RuleState.ALLOW);
     }
 
     /**
+     * Constructor to be used in order to create a WritableSecurityRuleImpl with given parameters. The rule will be
+     * marked as not persisted.
+     *
      * @param groups the groups to which the rule applies
      * @param users the users to which the rule applies
      * @param rights the rights concerned by this rule
@@ -73,6 +83,25 @@ public class WritableSecurityRuleImpl implements WritableSecurityRule
         } else {
             this.state = RuleState.ALLOW;
         }
+        this.isPersisted = false;
+    }
+
+    /**
+     * Create a WritableSecurityRuleImpl, which corresponds to a {@link ReadableSecurityRule}. Actually, this
+     * constructor acts like an adapter between {@link ReadableSecurityRule} and {@link WritableSecurityRule}.
+     * <p>
+     * TODO: the difference between a WritableSecurityRule and a ReadableSecurityRule should be that the fields of the
+     * ReadableSecurityRule can not be modified, since they're supposed to be immutable.
+     *
+     * @param rule the rule from which the fields will be copied
+     */
+    public WritableSecurityRuleImpl(ReadableSecurityRule rule)
+    {
+        this.groups = new ArrayList<>(rule.getGroups());
+        this.users = new ArrayList<>(rule.getUsers());
+        this.rights = rule.getRights();
+        this.state = rule.getState();
+        this.isPersisted = rule.isPersisted();
     }
 
     @Override public List<DocumentReference> getUsers()
@@ -130,10 +159,16 @@ public class WritableSecurityRuleImpl implements WritableSecurityRule
         this.rights = new RightSet(rights);
     }
 
+    /**
+     * @return true if the rule is already persisted, otherwise false. By using {@link
+     *     WritableSecurityRuleImpl#WritableSecurityRuleImpl()} or {@link WritableSecurityRuleImpl#WritableSecurityRuleImpl(List,
+     *     List, RightSet, RuleState)}, the rule is marked by default as not persisted. Otherwise, if the current rule
+     *     comes from a {@link ReadableSecurityRule} (eventually using {@link WritableSecurityRuleImpl#WritableSecurityRuleImpl(ReadableSecurityRule)},
+     *     the value of {@link WritableSecurityRuleImpl#isPersisted} will be copied from the object given as parameter.
+     */
     @Override public boolean isPersisted()
     {
-        // TODO: to be implemented
-        return false;
+        return isPersisted;
     }
 
     @Override public boolean match(Right right)

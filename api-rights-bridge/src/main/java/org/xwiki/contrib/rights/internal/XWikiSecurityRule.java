@@ -133,6 +133,9 @@ public class XWikiSecurityRule implements ReadableSecurityRule
         WikiReference wikiReference, boolean disableEditRight)
     {
         state = (obj.getIntValue(XWikiConstants.ALLOW_FIELD_NAME) == 1) ? RuleState.ALLOW : RuleState.DENY;
+
+        // By default, the current rule is marked as persistent because it's coming from the {@link BaseObject} given
+        // as parameter (a persisted one).
         this.isPersisted = true;
 
         for (String level : LevelsClass.getListFromString(obj.getStringValue(XWikiConstants.LEVELS_FIELD_NAME))) {
@@ -259,7 +262,7 @@ public class XWikiSecurityRule implements ReadableSecurityRule
      * @param resolver A document reference resolver for user and group pages.
      * @param wikiReference A reference to the wiki from which these rules are extracted.
      * @param disableEditRight when true, edit right is disregarded while building this rule.
-     * @return a newly created security rule.
+     * @return a newly created security rule, marked as persisted (since it's based on the given BaseObject parameter)
      * @throws IllegalArgumentException if the source object for the rules is badly formed.
      */
     static SecurityRule createNewRule(BaseObject obj, DocumentReferenceResolver<String> resolver,
