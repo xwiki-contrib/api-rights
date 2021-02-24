@@ -81,12 +81,4 @@
     <module>api-rights-api</module>
     <module>api-rights-bridge</module>
   </modules>
-  <build>
-    <plugins>
-      <plugin>
-        <groupId>org.revapi</groupId>
-        <artifactId>revapi-maven-plugin</artifactId>
-      </plugin>
-    </plugins>
-  </build>
 </project>
