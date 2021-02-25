@@ -25,6 +25,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.xwiki.model.reference.DocumentReference;
@@ -148,6 +149,9 @@ public class XWikiSecurityRule implements ReadableSecurityRule
         // No need to computes users when no right will match.
         if (rights.size() > 0) {
             for (String user : UsersClass.getListFromString(obj.getStringValue(XWikiConstants.USERS_FIELD_NAME))) {
+                if (StringUtils.isBlank(user)) {
+                    continue;
+                }
                 DocumentReference ref = resolver.resolve(user, wikiReference);
                 if (XWikiConstants.GUEST_USER.equals(ref.getName())) {
                     // In the database, Rights for public users (not logged in) are stored using a user named
@@ -159,6 +163,9 @@ public class XWikiSecurityRule implements ReadableSecurityRule
             }
 
             for (String group : GroupsClass.getListFromString(obj.getStringValue(XWikiConstants.GROUPS_FIELD_NAME))) {
+                if (StringUtils.isBlank(group)) {
+                    continue;
+                }
                 DocumentReference ref = resolver.resolve(group, wikiReference);
                 this.groups.add(ref);
             }
