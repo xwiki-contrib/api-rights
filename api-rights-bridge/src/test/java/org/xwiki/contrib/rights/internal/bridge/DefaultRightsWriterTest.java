@@ -79,6 +79,10 @@ class DefaultRightsWriterTest
 
     private static final String XWIKI_WEB_PREFERENCES = "WebPreferences";
 
+    private static final String XWIKI_RIGHTS_CLASS_DOC_NAME = "XWiki.XWikiRights";
+
+    private static final String XWIKI_GLOBAL_RIGHTS_CLASS_DOC_NAME = "XWiki.XWikiGlobalRights";
+
     private static final EntityReference XWIKI_RIGHTS_CLASS =
         new EntityReference("XWikiRights", EntityType.DOCUMENT, new EntityReference(XWIKI_SPACE, EntityType.SPACE));
 
@@ -269,5 +273,176 @@ class DefaultRightsWriterTest
         assertEquals(1, document.getXObjects(XWIKI_RIGHTS_CLASS).get(2).getIntValue(XWikiConstants.ALLOW_FIELD_NAME));
     }
 
-    // TODO: add a test where an error occurs.
+    @Test
+    void testThatNeedsToBeRenamed() throws XWikiException
+    {
+        DocumentReference documentReference = new DocumentReference("xwiki", "Space", "Page");
+        XWikiDocument xWikiDocument =
+            this.oldcore.getSpyXWiki().getDocument(documentReference, this.oldcore.getXWikiContext());
+
+        Document document = new Document(xWikiDocument, this.oldcore.getXWikiContext());
+        assertEquals(0, document.getObjects(XWIKI_RIGHTS_CLASS_DOC_NAME).size());
+        assertEquals(0, document.getObjects(XWIKI_GLOBAL_RIGHTS_CLASS_DOC_NAME).size());
+
+        WritableSecurityRule rule = new WritableSecurityRuleImpl(Collections.emptyList(), Collections.emptyList(),
+            new RightSet(Right.EDIT, Right.COMMENT), RuleState.DENY);
+
+        this.rightsWriter.saveRules(Collections.singletonList(rule), documentReference);
+
+        XWikiDocument resultDoc =
+            oldcore.getSpyXWiki().getDocument(documentReference, oldcore.getXWikiContext());
+
+        assertEquals(1, resultDoc.getXObjects(XWIKI_RIGHTS_CLASS).size());
+        BaseObject rightObject = resultDoc.getXObjects(XWIKI_RIGHTS_CLASS).get(0);
+        assertEquals(0, rightObject.getNumber());
+
+        WritableSecurityRule ruleToBeCopied = new WritableSecurityRuleImpl(Collections.emptyList(),
+            Collections.emptyList(), new RightSet(Right.PROGRAM), RuleState.ALLOW);
+        this.rightsWriter.copyRuleIntoBaseObject(rightObject, ruleToBeCopied);
+
+        assertEquals(0, rightObject.getNumber());
+
+        // Assert that the rule was copied into the document
+        // Assert that the copied number has the same number.
+        // TODO: save the document.
+        // Actually, testing what's happening.
+    }
+
+    @Test
+    void replaceWithLessRules() throws XWikiException
+    {
+        SpaceReference spaceReference = new SpaceReference("xwiki", "Space", "Page");
+        DocumentReference adminUserDocRef = new DocumentReference("xwiki", "XWiki", "XWikiAdmin");
+
+        WritableSecurityRule dumb = new WritableSecurityRuleImpl(Collections.emptyList(), Collections.emptyList(),
+            new RightSet(Right.EDIT, Right.COMMENT), RuleState.DENY);
+
+        WritableSecurityRule dumb1 = new WritableSecurityRuleImpl(Collections.emptyList(),
+            Collections.singletonList(adminUserDocRef), new RightSet(Right.VIEW), RuleState.ALLOW);
+
+        rightsWriter.saveRules(Arrays.asList(dumb, dumb1, dumb, dumb1), spaceReference);
+
+        DocumentReference spaceWebPreferencesRef = new DocumentReference(XWIKI_WEB_PREFERENCES, spaceReference);
+        XWikiDocument spaceWebPreferencesDoc =
+            oldcore.getSpyXWiki().getDocument(spaceWebPreferencesRef, oldcore.getXWikiContext());
+
+        int expected = 4;
+        assertEquals(expected, spaceWebPreferencesDoc.getXObjects(XWIKI_GLOBAL_RIGHTS_CLASS).size());
+        for (int i = 0; i < expected; ++i) {
+            assertEquals(i, spaceWebPreferencesDoc.getXObjects(XWIKI_GLOBAL_RIGHTS_CLASS).get(i).getNumber());
+        }
+
+        WritableSecurityRule ruleToCopy = new WritableSecurityRuleImpl(Collections.emptyList(), Collections.emptyList(),
+            new RightSet(Right.PROGRAM, Right.VIEW), RuleState.ALLOW);
+
+        this.rightsWriter
+            .addRightsByRecyclingObjects(Collections.singletonList(ruleToCopy), spaceWebPreferencesDoc,
+                XWIKI_GLOBAL_RIGHTS_CLASS);
+
+        assertEquals(1, spaceWebPreferencesDoc.getXObjects(XWIKI_GLOBAL_RIGHTS_CLASS).size());
+        assertEquals(0, spaceWebPreferencesDoc.getXObjects(XWIKI_GLOBAL_RIGHTS_CLASS).get(0).getNumber());
+    }
+
+    @Test
+    void replaceWithMoreRules() throws XWikiException
+    {
+        // copy a rule in the same object & test if it copied all the fields
+        DocumentReference documentReference = new DocumentReference("xwiki", "SandBox", "Main");
+
+        DocumentReference user1 = new DocumentReference("xwiki", "XWiki", "Admin");
+        DocumentReference user2 = new DocumentReference("xwiki", "test1", "p");
+        DocumentReference user3 = new DocumentReference("xwiki", "userSpace", "user");
+
+        DocumentReference group1 = new DocumentReference("xwiki", "XWiki", "group");
+        DocumentReference group2 = new DocumentReference("xwiki", "space", "group1");
+        DocumentReference group3 = new DocumentReference("xwiki", "MySpace", "group3");
+        DocumentReference group4 = new DocumentReference("xwiki", "Something", "group4");
+
+        WritableSecurityRule dumb = new WritableSecurityRuleImpl(Arrays.asList(group1, group2), Arrays.asList(user1,
+            user2), new RightSet(Right.EDIT, Right.COMMENT), RuleState.DENY);
+
+        WritableSecurityRule dumbRight2 = new WritableSecurityRuleImpl(Arrays.asList(group3, group4),
+            Arrays.asList(user3), new RightSet(Right.VIEW, Right.PROGRAM, Right.EDIT), RuleState.DENY);
+
+        rightsWriter.saveRules(Arrays.asList(dumb, dumbRight2), documentReference);
+
+        XWikiDocument document = oldcore.getSpyXWiki().getDocument(documentReference, oldcore.getXWikiContext());
+
+        int noPersistedObjects = 2;
+        assertEquals(noPersistedObjects, document.getXObjects(XWIKI_RIGHTS_CLASS).size());
+
+        for (int i = 0; i < noPersistedObjects; ++i) {
+            assertEquals(i, document.getXObjects(XWIKI_RIGHTS_CLASS).get(i).getNumber());
+        }
+
+        rightsWriter.addRightsByRecyclingObjects(Arrays.asList(dumbRight2, dumb, dumbRight2, dumbRight2),
+            document, XWIKI_RIGHTS_CLASS);
+
+        noPersistedObjects = 4;
+        assertEquals(noPersistedObjects, document.getXObjects(XWIKI_RIGHTS_CLASS).size());
+        for (int i = 0; i < noPersistedObjects; ++i) {
+            assertEquals(i, document.getXObjects(XWIKI_RIGHTS_CLASS).get(i).getNumber());
+        }
+    }
+
+    @Test
+    void copyRuleIntoBaseObjectForGlobalRights() throws XWikiException
+    {
+        copyRuleIntoBaseObjects(new SpaceReference("xwiki", "Space", "MySpace"), XWIKI_GLOBAL_RIGHTS_CLASS);
+    }
+
+    @Test
+    void copyRuleIntoBaseObjectForNormalRights() throws XWikiException
+    {
+        copyRuleIntoBaseObjects(new DocumentReference("xwiki", "space", "myPage"), XWIKI_RIGHTS_CLASS);
+    }
+
+    private void copyRuleIntoBaseObjects(EntityReference whereToSaveRules, EntityReference rightsClassReference)
+        throws XWikiException
+    {
+        // copy a rule in the same object & test if it copied all the fields
+        WritableSecurityRule dumbRule = new WritableSecurityRuleImpl(Collections.emptyList(), Collections.emptyList(),
+            new RightSet(Right.EDIT, Right.COMMENT), RuleState.DENY);
+
+        rightsWriter.saveRules(Collections.singletonList(dumbRule), whereToSaveRules);
+
+        XWikiDocument document = null;
+        if (EntityType.SPACE == whereToSaveRules.getType()) {
+            DocumentReference spaceWebPreferencesRef = new DocumentReference(XWIKI_WEB_PREFERENCES,
+                (SpaceReference) whereToSaveRules);
+            document =
+                oldcore.getSpyXWiki().getDocument(spaceWebPreferencesRef, oldcore.getXWikiContext());
+        } else if (EntityType.DOCUMENT == whereToSaveRules.getType()) {
+            document = oldcore.getSpyXWiki().getDocument(whereToSaveRules, oldcore.getXWikiContext());
+        }
+        assertNotNull(document);
+        List<BaseObject> objects = document.getXObjects(rightsClassReference);
+        BaseObject right = objects.get(0);
+
+        // before
+        assertEquals(Collections.emptyList(), UsersClass.getListFromString(right.getLargeStringValue("users")));
+        assertEquals(Collections.emptyList(), GroupsClass.getListFromString(right.getLargeStringValue("groups")));
+        // TODO: how is this serialized, in what order?
+//        assertEquals("comment", objects.get(0).getLargeStringValue("levels"));
+        assertEquals(0, right.getIntValue(XWikiConstants.ALLOW_FIELD_NAME));
+
+        DocumentReference adminUserDocRef = new DocumentReference("xwiki", "XWiki", "XWikiAdmin");
+        WritableSecurityRule dumbRule2 = new WritableSecurityRuleImpl(Collections.singletonList(adminUserDocRef),
+            Collections.singletonList(adminUserDocRef), new RightSet(Right.VIEW), RuleState.ALLOW);
+
+        rightsWriter.copyRuleIntoBaseObject(right, dumbRule2);
+
+        objects = document.getXObjects(rightsClassReference);
+        right = objects.get(0);
+        // TODO: this will probably fall after RIGHTSAPI-8
+        assertEquals(Collections.singletonList("xwiki:XWiki.XWikiAdmin"),
+            UsersClass.getListFromString(right.getLargeStringValue("users")));
+        assertEquals(Collections.singletonList("xwiki:XWiki.XWikiAdmin"),
+            GroupsClass.getListFromString(right.getLargeStringValue("groups")));
+
+        // TODO: how is this serialized, in what order?
+        // TODO: further investigation needed
+//        assertEquals("view", objects.get(0).getLargeStringValue("levels"));
+        assertEquals(1, right.getIntValue(XWikiConstants.ALLOW_FIELD_NAME));
+    }
 }

@@ -113,6 +113,96 @@ public class DefaultRightsWriter extends AbstractRightsWriter
     }
 
     /**
+     * Translates a {@link ReadableSecurityRule} into a {@link BaseObject}.
+     *
+     * It's the caller responsibility to call this on the right object.
+     * @param right
+     * @param rule
+     */
+    public void copyRuleIntoBaseObject(BaseObject right, ReadableSecurityRule rule)
+    {
+        if (null != right) {
+            // TODO: @param objectClass needs to be replaced with isGlobal/isNotGlobal in order to simplify
+            // TODO: The rule can be copied only if:
+            /*
+            The rule is intended to be a global one and <code>right</code> is a XWIKI_GLOBAL_RIGHTS_CLASS
+            OR
+            The rule is intended to be a local one & @param right is a XWIKI_RIGHTS_CLASS
+             */
+
+            if (null != rule.getState()) {
+                right.setIntValue(XWikiConstants.ALLOW_FIELD_NAME,
+                    rule.getState().getValue() == RuleState.DENY.getValue() ? 0 : 1);
+            }
+            PropertyClass groups = (PropertyClass) right.getXClass(getXContext()).get(GROUPS_FIELD_RIGHTS_OBJECT);
+            PropertyClass users = (PropertyClass) right.getXClass(getXContext()).get(USERS_FIELD_RIGHTS_OBJECT);
+            PropertyClass levels = (PropertyClass) right.getXClass(getXContext()).get(LEVELS_FIELD_RIGHTS_OBJECT);
+            if (null != groups) {
+                BaseProperty<?> groupsProperty = groups.fromStringArray(
+                    rule.getGroups().stream()
+                        .map(k -> entityReferenceSerializer.serialize(k))
+                        .toArray(String[]::new)
+                );
+                right.set(GROUPS_FIELD_RIGHTS_OBJECT, groupsProperty.getValue(), getXContext());
+            }
+
+            if (null != users) {
+                BaseProperty<?> usersProperty = users.fromStringArray(
+                    rule.getUsers().stream()
+                        .map(k -> entityReferenceSerializer.serialize(k))
+                        .toArray(String[]::new)
+                );
+                right.set(USERS_FIELD_RIGHTS_OBJECT, usersProperty.getValue(), getXContext());
+            }
+
+            if (null != levels) {
+                BaseProperty<?> levelsProperty = levels.fromStringArray(
+                    rule.getRights().stream()
+                        .map(Right::getName)
+                        .toArray(String[]::new)
+                );
+                right.set(LEVELS_FIELD_RIGHTS_OBJECT, levelsProperty.getValue(), getXContext());
+            }
+        }
+    }
+
+    /**
+     *
+     * @param rules
+     * @param document
+     * @param classReference
+     * @throws XWikiException
+     */
+    public void addRightsByRecyclingObjects(List<ReadableSecurityRule> rules, XWikiDocument document,
+        EntityReference classReference) throws XWikiException
+    {
+        // TODO: the parameter type should be DocumentReference
+        List<BaseObject> storedObjects = document.getXObjects(classReference);
+        if (rules.size() > storedObjects.size()) {
+            for (int i = 0; i < storedObjects.size(); ++i) {
+                copyRuleIntoBaseObject(storedObjects.get(i), rules.get(i));
+            }
+            for (int i = storedObjects.size(); i < rules.size(); ++i) {
+                // Create new objects in the document.
+//                addRulesAsObjects(Arrays.asList(rules.get(i)))
+
+                // TODO: this needs to be replace with addRulesAsObjects, the upper (commented call)
+                addRightObjectToDocument(rules.get(i), document, classReference, getXContext());
+            }
+        } else {
+            for (int i = 0; i < rules.size(); ++i) {
+                copyRuleIntoBaseObject(storedObjects.get(i), rules.get(i));
+            }
+            while (rules.size() != storedObjects.size()) {
+                storedObjects.remove(storedObjects.size() - 1);
+            }
+        }
+
+        // In the end, save the document
+        getXWiki().saveDocument(document, getXContext());
+    }
+
+    /**
      * @return the xcontext
      */
     private XWikiContext getXContext()
@@ -158,42 +248,7 @@ public class DefaultRightsWriter extends AbstractRightsWriter
         XWikiContext context) throws XWikiException, IllegalArgumentException
     {
         BaseObject object = doc.newXObject(rightsClass, context);
-        if (null == rule) {
-            throw new IllegalArgumentException("The rule cannot be null.");
-        }
-        if (null != rule.getState()) {
-            object.setIntValue(XWikiConstants.ALLOW_FIELD_NAME,
-                rule.getState().getValue() == RuleState.DENY.getValue() ? 0 : 1);
-        }
-        PropertyClass groups = (PropertyClass) object.getXClass(getXContext()).get(GROUPS_FIELD_RIGHTS_OBJECT);
-        PropertyClass users = (PropertyClass) object.getXClass(getXContext()).get(USERS_FIELD_RIGHTS_OBJECT);
-        PropertyClass levels = (PropertyClass) object.getXClass(getXContext()).get(LEVELS_FIELD_RIGHTS_OBJECT);
-        if (null != groups) {
-            BaseProperty<?> groupsProperty = groups.fromStringArray(
-                rule.getGroups().stream()
-                    .map(k -> entityReferenceSerializer.serialize(k))
-                    .toArray(String[]::new)
-            );
-            object.set(GROUPS_FIELD_RIGHTS_OBJECT, groupsProperty.getValue(), getXContext());
-        }
-
-        if (null != users) {
-            BaseProperty<?> usersProperty = users.fromStringArray(
-                rule.getUsers().stream()
-                    .map(k -> entityReferenceSerializer.serialize(k))
-                    .toArray(String[]::new)
-            );
-            object.set(USERS_FIELD_RIGHTS_OBJECT, usersProperty.getValue(), getXContext());
-        }
-
-        if (null != levels) {
-            BaseProperty<?> levelsProperty = levels.fromStringArray(
-                rule.getRights().stream()
-                    .map(Right::getName)
-                    .toArray(String[]::new)
-            );
-            object.set(LEVELS_FIELD_RIGHTS_OBJECT, levelsProperty.getValue(), getXContext());
-        }
+        copyRuleIntoBaseObject(object, rule);
     }
 
     private void clearRightsOnPage(DocumentReference reference, boolean areGlobalRights) throws XWikiException
