@@ -93,18 +93,18 @@ public class DefaultRightsWriter extends AbstractRightsWriter
                     documentReference = new DocumentReference(XWIKI_PREFERENCES, new SpaceReference(XWIKI_SPACE,
                         new WikiReference(reference)));
                     clearRightsOnPage(documentReference, true);
-                    addRulesAsObjects(rules, documentReference, true);
+                    addRulesToDocumentReference(rules, documentReference, true);
                     break;
                 case SPACE:
                     documentReference = new DocumentReference(XWIKI_WEB_PREFERENCES, new SpaceReference(reference));
                     clearRightsOnPage(documentReference, true);
-                    addRulesAsObjects(rules, documentReference, true);
+                    addRulesToDocumentReference(rules, documentReference, true);
                     break;
                 case DOCUMENT:
                     // The current reference corresponds to a terminal page.
                     documentReference = new DocumentReference(reference);
                     clearRightsOnPage(documentReference, false);
-                    addRulesAsObjects(rules, documentReference, false);
+                    addRulesToDocumentReference(rules, documentReference, false);
                     break;
                 default:
                     throw new UnsupportedOperationException("Could not set rights for the given reference.");
@@ -114,22 +114,17 @@ public class DefaultRightsWriter extends AbstractRightsWriter
 
     /**
      * Translates a {@link ReadableSecurityRule} into a {@link BaseObject}.
+     * <p>
+     * It's the caller responsibility to call this on a valid right object (depending on what's the desired behavior,
+     * the <code>right</code>'s XClass should be, but not limited to {@link #XWIKI_RIGHTS_CLASS} or {@link
+     * #XWIKI_GLOBAL_RIGHTS_CLASS}.
      *
-     * It's the caller responsibility to call this on the right object.
-     * @param right
+     * @param right the BaseObject to which the properties of the <code>rule</code> will be copied to
      * @param rule
      */
     public void copyRuleIntoBaseObject(BaseObject right, ReadableSecurityRule rule)
     {
         if (null != right) {
-            // TODO: @param objectClass needs to be replaced with isGlobal/isNotGlobal in order to simplify
-            // TODO: The rule can be copied only if:
-            /*
-            The rule is intended to be a global one and <code>right</code> is a XWIKI_GLOBAL_RIGHTS_CLASS
-            OR
-            The rule is intended to be a local one & @param right is a XWIKI_RIGHTS_CLASS
-             */
-
             if (null != rule.getState()) {
                 right.setIntValue(XWikiConstants.ALLOW_FIELD_NAME,
                     rule.getState().getValue() == RuleState.DENY.getValue() ? 0 : 1);
@@ -167,10 +162,10 @@ public class DefaultRightsWriter extends AbstractRightsWriter
     }
 
     /**
-     *
-     * @param rules
-     * @param document
-     * @param classReference
+     * @param rules for which Right BaseObjects will be created and added to the <code>document</code>
+     * @param document where the <code>rules</code> are saved
+     * @param classReference {@link #XWIKI_GLOBAL_RIGHTS_CLASS} or {@link #XWIKI_RIGHTS_CLASS}, depending on the
+     *     {@link EntityType} of the <code>document</code>
      * @throws XWikiException
      */
     public void addRightsByRecyclingObjects(List<ReadableSecurityRule> rules, XWikiDocument document,
@@ -184,9 +179,6 @@ public class DefaultRightsWriter extends AbstractRightsWriter
             }
             for (int i = storedObjects.size(); i < rules.size(); ++i) {
                 // Create new objects in the document.
-//                addRulesAsObjects(Arrays.asList(rules.get(i)))
-
-                // TODO: this needs to be replace with addRulesAsObjects, the upper (commented call)
                 addRightObjectToDocument(rules.get(i), document, classReference, getXContext());
             }
         } else {
@@ -224,7 +216,8 @@ public class DefaultRightsWriter extends AbstractRightsWriter
      * @param isGlobal if true, the created BaseObjects will be of type XWikiGlobalRights. Else, XWikiRights objects
      *     will be created.
      */
-    private void addRulesAsObjects(List<ReadableSecurityRule> rules, DocumentReference reference, boolean isGlobal)
+    private void addRulesToDocumentReference(List<ReadableSecurityRule> rules, DocumentReference reference,
+        boolean isGlobal)
         throws XWikiException
     {
         XWikiDocument doc = getXWiki().getDocument(reference, getXContext());

@@ -207,7 +207,6 @@ class DefaultRightsWriterTest
         List<BaseObject> objects = document.getXObjects(XWIKI_GLOBAL_RIGHTS_CLASS);
         assertEquals(1, objects.size());
 
-        // TODO: is there a way so we can use raw values, instead of already serialized ones?
         assertEquals(Arrays.asList("xwiki:XWiki.Admin", "xwiki:XWiki.SimpleUser"),
             UsersClass.getListFromString(objects.get(0).getLargeStringValue("users")));
         assertEquals(Arrays.asList("xwiki:XWiki.XWikiAdminGroup", "xwiki:XWiki.XWikiAllGroup"),
@@ -301,11 +300,6 @@ class DefaultRightsWriterTest
         this.rightsWriter.copyRuleIntoBaseObject(rightObject, ruleToBeCopied);
 
         assertEquals(0, rightObject.getNumber());
-
-        // Assert that the rule was copied into the document
-        // Assert that the copied number has the same number.
-        // TODO: save the document.
-        // Actually, testing what's happening.
     }
 
     @Test
@@ -362,7 +356,7 @@ class DefaultRightsWriterTest
             user2), new RightSet(Right.EDIT, Right.COMMENT), RuleState.DENY);
 
         WritableSecurityRule dumbRight2 = new WritableSecurityRuleImpl(Arrays.asList(group3, group4),
-            Arrays.asList(user3), new RightSet(Right.VIEW, Right.PROGRAM, Right.EDIT), RuleState.DENY);
+            Collections.singletonList(user3), new RightSet(Right.VIEW, Right.PROGRAM, Right.EDIT), RuleState.DENY);
 
         rightsWriter.saveRules(Arrays.asList(dumb, dumbRight2), documentReference);
 
@@ -402,7 +396,7 @@ class DefaultRightsWriterTest
     {
         // copy a rule in the same object & test if it copied all the fields
         WritableSecurityRule dumbRule = new WritableSecurityRuleImpl(Collections.emptyList(), Collections.emptyList(),
-            new RightSet(Right.EDIT, Right.COMMENT), RuleState.DENY);
+            new RightSet(Right.EDIT, Right.COMMENT, Right.VIEW), RuleState.DENY);
 
         rightsWriter.saveRules(Collections.singletonList(dumbRule), whereToSaveRules);
 
@@ -422,8 +416,9 @@ class DefaultRightsWriterTest
         // before
         assertEquals(Collections.emptyList(), UsersClass.getListFromString(right.getLargeStringValue("users")));
         assertEquals(Collections.emptyList(), GroupsClass.getListFromString(right.getLargeStringValue("groups")));
-        // TODO: how is this serialized, in what order?
-//        assertEquals("comment", objects.get(0).getLargeStringValue("levels"));
+
+        assertEquals(Arrays.asList("view", "edit", "comment"), LevelsClass.getListFromString(right.getLargeStringValue(
+            "levels")));
         assertEquals(0, right.getIntValue(XWikiConstants.ALLOW_FIELD_NAME));
 
         DocumentReference adminUserDocRef = new DocumentReference("xwiki", "XWiki", "XWikiAdmin");
@@ -440,9 +435,8 @@ class DefaultRightsWriterTest
         assertEquals(Collections.singletonList("xwiki:XWiki.XWikiAdmin"),
             GroupsClass.getListFromString(right.getLargeStringValue("groups")));
 
-        // TODO: how is this serialized, in what order?
-        // TODO: further investigation needed
-//        assertEquals("view", objects.get(0).getLargeStringValue("levels"));
+        assertEquals(Collections.singletonList("view"), LevelsClass.getListFromString(right.getLargeStringValue(
+            "levels")));
         assertEquals(1, right.getIntValue(XWikiConstants.ALLOW_FIELD_NAME));
     }
 }
