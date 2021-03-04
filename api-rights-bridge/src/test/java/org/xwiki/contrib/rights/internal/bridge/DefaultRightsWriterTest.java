@@ -207,9 +207,9 @@ class DefaultRightsWriterTest
         List<BaseObject> objects = document.getXObjects(XWIKI_GLOBAL_RIGHTS_CLASS);
         assertEquals(1, objects.size());
 
-        assertEquals(Arrays.asList("xwiki:XWiki.Admin", "xwiki:XWiki.SimpleUser"),
+        assertEquals(Arrays.asList("XWiki.Admin", "XWiki.SimpleUser"),
             UsersClass.getListFromString(objects.get(0).getLargeStringValue("users")));
-        assertEquals(Arrays.asList("xwiki:XWiki.XWikiAdminGroup", "xwiki:XWiki.XWikiAllGroup"),
+        assertEquals(Arrays.asList("XWiki.XWikiAdminGroup", "XWiki.XWikiAllGroup"),
             GroupsClass.getListFromString(objects.get(0).getLargeStringValue("groups")));
         assertEquals("comment", objects.get(0).getLargeStringValue("levels"));
         assertEquals(1, objects.get(0).getIntValue(XWikiConstants.ALLOW_FIELD_NAME));
@@ -266,7 +266,7 @@ class DefaultRightsWriterTest
                 .getListFromString(document.getXObjects(XWIKI_RIGHTS_CLASS).get(1).getLargeStringValue("levels")));
         assertEquals(1, document.getXObjects(XWIKI_RIGHTS_CLASS).get(1).getIntValue(XWikiConstants.ALLOW_FIELD_NAME));
 
-        assertEquals(Collections.singletonList("xwiki:XWiki.XWikiAdmin"),
+        assertEquals(Collections.singletonList("XWiki.XWikiAdmin"),
             UsersClass
                 .getListFromString(document.getXObjects(XWIKI_RIGHTS_CLASS).get(2).getLargeStringValue("users")));
         assertEquals(1, document.getXObjects(XWIKI_RIGHTS_CLASS).get(2).getIntValue(XWikiConstants.ALLOW_FIELD_NAME));
@@ -429,10 +429,9 @@ class DefaultRightsWriterTest
 
         objects = document.getXObjects(rightsClassReference);
         right = objects.get(0);
-        // TODO: this will probably fall after RIGHTSAPI-8
-        assertEquals(Collections.singletonList("xwiki:XWiki.XWikiAdmin"),
+        assertEquals(Collections.singletonList("XWiki.XWikiAdmin"),
             UsersClass.getListFromString(right.getLargeStringValue("users")));
-        assertEquals(Collections.singletonList("xwiki:XWiki.XWikiAdmin"),
+        assertEquals(Collections.singletonList("XWiki.XWikiAdmin"),
             GroupsClass.getListFromString(right.getLargeStringValue("groups")));
 
         assertEquals(Collections.singletonList("view"), LevelsClass.getListFromString(right.getLargeStringValue(

@@ -22,6 +22,7 @@ package org.xwiki.contrib.rights.internal;
 import java.util.List;
 
 import javax.inject.Inject;
+import javax.inject.Named;
 import javax.inject.Provider;
 import javax.inject.Singleton;
 
@@ -74,6 +75,7 @@ public class DefaultRightsWriter extends AbstractRightsWriter
     private Provider<XWikiContext> xcontextProvider;
 
     @Inject
+    @Named("local")
     private EntityReferenceSerializer<String> entityReferenceSerializer;
 
     /**
