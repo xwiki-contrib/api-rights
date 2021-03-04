@@ -83,6 +83,8 @@ class DefaultRightsWriterTest
 
     private static final String XWIKI_GLOBAL_RIGHTS_CLASS_DOC_NAME = "XWiki.XWikiGlobalRights";
 
+    private static final String GROUPS_PROPERTY = "groups";
+
     private static final EntityReference XWIKI_RIGHTS_CLASS =
         new EntityReference("XWikiRights", EntityType.DOCUMENT, new EntityReference(XWIKI_SPACE, EntityType.SPACE));
 
@@ -437,5 +439,75 @@ class DefaultRightsWriterTest
         assertEquals(Collections.singletonList("view"), LevelsClass.getListFromString(right.getLargeStringValue(
             "levels")));
         assertEquals(1, right.getIntValue(XWikiConstants.ALLOW_FIELD_NAME));
+    }
+
+    /**
+     * Helper function to setup manatory classes on a different subwiki than the main wiki.
+     *
+     * @param wikiname the wiki name to initialize mandatory classes on
+     */
+    private void initializeMandatoryDocsOnWiki(String wikiname)
+    {
+        String oldWikiId = this.oldcore.getXWikiContext().getWikiId();
+        try {
+            this.oldcore.getXWikiContext().setWikiId(wikiname);
+            this.oldcore.getSpyXWiki().initializeMandatoryDocuments(this.oldcore.getXWikiContext());
+        } catch (Exception e) {
+            // Dunno what else to do, but definitely I should do something smarter
+            e.printStackTrace();
+        } finally {
+            this.oldcore.getXWikiContext().setWikiId(oldWikiId);
+        }
+    }
+
+    @Test
+    void testAddRightsGroupOnTheSameWiki() throws XWikiException
+    {
+        // initialize mandatory classes on the subwiki to test things on
+        initializeMandatoryDocsOnWiki("subwiki");
+
+        DocumentReference documentReference = new DocumentReference("subwiki", "S", "P");
+        // prepare rules to put on the document
+        WritableSecurityRule rule = new WritableSecurityRuleImpl(
+            Collections.singletonList(new DocumentReference("subwiki", "XWiki", "XWikiAdminGroup")),
+            Collections.emptyList(), new RightSet(Right.VIEW), RuleState.ALLOW);
+
+        // call the function under test
+        this.rightsWriter.saveRules(Arrays.asList(rule), documentReference);
+
+        // get the document that was just modified and assert on it
+        XWikiDocument resultDoc =
+            this.oldcore.getSpyXWiki().getDocument(documentReference, this.oldcore.getXWikiContext());
+        // check that there is a single object set
+        assertEquals(1, resultDoc.getXObjects(XWIKI_RIGHTS_CLASS).size());
+        // check that the value of the group set in the object is not prefixed
+        assertEquals("XWiki.XWikiAdminGroup",
+            resultDoc.getXObject(XWIKI_RIGHTS_CLASS).getLargeStringValue(GROUPS_PROPERTY));
+    }
+
+    @Test
+    void testAddRightsGroupOnDifferentWiki() throws XWikiException
+    {
+        // initialize mandatory classes on the subwiki to test things on
+        initializeMandatoryDocsOnWiki("subwiki");
+
+        DocumentReference documentReference = new DocumentReference("subwiki", "S", "P");
+        // prepare rules to put on the document
+        WritableSecurityRule rule = new WritableSecurityRuleImpl(
+            Collections.singletonList(new DocumentReference("xwiki", "XWiki", "XWikiAdminGroup")),
+            Collections.emptyList(), new RightSet(Right.VIEW), RuleState.ALLOW);
+
+        // call the function under test
+        this.rightsWriter.saveRules(Arrays.asList(rule), documentReference);
+
+        // get the document that was just modified and assert on it
+        XWikiDocument resultDoc =
+            this.oldcore.getSpyXWiki().getDocument(documentReference, this.oldcore.getXWikiContext());
+        Document resultDocEasyAPI = new Document(resultDoc, this.oldcore.getXWikiContext());
+        // check that there is an object set
+        assertEquals(1, resultDocEasyAPI.getxWikiObjects().size());
+        // check that the value of the group set in the object is prefixed
+        assertEquals("xwiki:XWiki.XWikiAdminGroup",
+            resultDocEasyAPI.getObject("XWiki.XWikiRights").getValue(GROUPS_PROPERTY));
     }
 }
