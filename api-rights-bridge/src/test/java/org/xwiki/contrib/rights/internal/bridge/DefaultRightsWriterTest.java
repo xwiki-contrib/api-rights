@@ -85,6 +85,8 @@ class DefaultRightsWriterTest
 
     private static final String GROUPS_PROPERTY = "groups";
 
+    private static final String USERS_PROPERTY = "users";
+
     private static final EntityReference XWIKI_RIGHTS_CLASS =
         new EntityReference("XWikiRights", EntityType.DOCUMENT, new EntityReference(XWIKI_SPACE, EntityType.SPACE));
 
@@ -509,5 +511,37 @@ class DefaultRightsWriterTest
         // check that the value of the group set in the object is prefixed
         assertEquals("xwiki:XWiki.XWikiAdminGroup",
             resultDocEasyAPI.getObject("XWiki.XWikiRights").getValue(GROUPS_PROPERTY));
+    }
+
+    @Test
+    void addRightsOnSpace() throws XWikiException
+    {
+        SpaceReference spaceReference = new SpaceReference("xwiki", "MySpace");
+        DocumentReference adminGroup = new DocumentReference("XWikiAdminGroup", new SpaceReference(XWIKI_SPACE,
+            new WikiReference("xwiki")));
+        DocumentReference adminUser = new DocumentReference("XWikiAdmin", spaceReference);
+
+        WritableSecurityRule rule = new WritableSecurityRuleImpl(Collections.singletonList(adminGroup),
+            Collections.singletonList(adminUser), new RightSet(Right.COMMENT, Right.EDIT, Right.DELETE),
+            RuleState.ALLOW);
+
+        rightsWriter.saveRules(Collections.singletonList(rule), spaceReference);
+
+        DocumentReference spaceWebPreference = new DocumentReference(XWIKI_WEB_PREFERENCES, spaceReference);
+
+        XWikiDocument spaceWebPreferenceDoc = oldcore.getSpyXWiki().getDocument(spaceWebPreference,
+            oldcore.getXWikiContext());
+
+        assertEquals(1, spaceWebPreferenceDoc.getXObjects(XWIKI_GLOBAL_RIGHTS_CLASS).size());
+        assertEquals("XWiki.XWikiAdminGroup",
+            spaceWebPreferenceDoc.getXObjects(XWIKI_GLOBAL_RIGHTS_CLASS).get(0).getLargeStringValue(GROUPS_PROPERTY));
+        assertEquals("MySpace.XWikiAdmin",
+            spaceWebPreferenceDoc.getXObjects(XWIKI_GLOBAL_RIGHTS_CLASS).get(0).getLargeStringValue(USERS_PROPERTY));
+    }
+
+    @Test
+    void addRightsWithSubjectsFromAnotherWikiOnSpace() throws XWikiException
+    {
+        // TO BE implemented
     }
 }
