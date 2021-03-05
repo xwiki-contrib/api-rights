@@ -395,73 +395,6 @@ class DefaultRightsWriterTest
         copyRuleIntoBaseObjects(new DocumentReference("xwiki", "space", "myPage"), XWIKI_RIGHTS_CLASS);
     }
 
-    private void copyRuleIntoBaseObjects(EntityReference whereToSaveRules, EntityReference rightsClassReference)
-        throws XWikiException
-    {
-        // copy a rule in the same object & test if it copied all the fields
-        WritableSecurityRule dumbRule = new WritableSecurityRuleImpl(Collections.emptyList(), Collections.emptyList(),
-            new RightSet(Right.EDIT, Right.COMMENT, Right.VIEW), RuleState.DENY);
-
-        rightsWriter.saveRules(Collections.singletonList(dumbRule), whereToSaveRules);
-
-        XWikiDocument document = null;
-        if (EntityType.SPACE == whereToSaveRules.getType()) {
-            DocumentReference spaceWebPreferencesRef = new DocumentReference(XWIKI_WEB_PREFERENCES,
-                (SpaceReference) whereToSaveRules);
-            document =
-                oldcore.getSpyXWiki().getDocument(spaceWebPreferencesRef, oldcore.getXWikiContext());
-        } else if (EntityType.DOCUMENT == whereToSaveRules.getType()) {
-            document = oldcore.getSpyXWiki().getDocument(whereToSaveRules, oldcore.getXWikiContext());
-        }
-        assertNotNull(document);
-        List<BaseObject> objects = document.getXObjects(rightsClassReference);
-        BaseObject right = objects.get(0);
-
-        // before
-        assertEquals(Collections.emptyList(), UsersClass.getListFromString(right.getLargeStringValue("users")));
-        assertEquals(Collections.emptyList(), GroupsClass.getListFromString(right.getLargeStringValue("groups")));
-
-        assertEquals(Arrays.asList("view", "edit", "comment"), LevelsClass.getListFromString(right.getLargeStringValue(
-            "levels")));
-        assertEquals(0, right.getIntValue(XWikiConstants.ALLOW_FIELD_NAME));
-
-        DocumentReference adminUserDocRef = new DocumentReference("xwiki", "XWiki", "XWikiAdmin");
-        WritableSecurityRule dumbRule2 = new WritableSecurityRuleImpl(Collections.singletonList(adminUserDocRef),
-            Collections.singletonList(adminUserDocRef), new RightSet(Right.VIEW), RuleState.ALLOW);
-
-        rightsWriter.copyRuleIntoBaseObject(right, dumbRule2);
-
-        objects = document.getXObjects(rightsClassReference);
-        right = objects.get(0);
-        assertEquals(Collections.singletonList("XWiki.XWikiAdmin"),
-            UsersClass.getListFromString(right.getLargeStringValue("users")));
-        assertEquals(Collections.singletonList("XWiki.XWikiAdmin"),
-            GroupsClass.getListFromString(right.getLargeStringValue("groups")));
-
-        assertEquals(Collections.singletonList("view"), LevelsClass.getListFromString(right.getLargeStringValue(
-            "levels")));
-        assertEquals(1, right.getIntValue(XWikiConstants.ALLOW_FIELD_NAME));
-    }
-
-    /**
-     * Helper function to setup manatory classes on a different subwiki than the main wiki.
-     *
-     * @param wikiname the wiki name to initialize mandatory classes on
-     */
-    private void initializeMandatoryDocsOnWiki(String wikiname)
-    {
-        String oldWikiId = this.oldcore.getXWikiContext().getWikiId();
-        try {
-            this.oldcore.getXWikiContext().setWikiId(wikiname);
-            this.oldcore.getSpyXWiki().initializeMandatoryDocuments(this.oldcore.getXWikiContext());
-        } catch (Exception e) {
-            // Dunno what else to do, but definitely I should do something smarter
-            e.printStackTrace();
-        } finally {
-            this.oldcore.getXWikiContext().setWikiId(oldWikiId);
-        }
-    }
-
     @Test
     void testAddRightsGroupOnTheSameWiki() throws XWikiException
     {
@@ -543,5 +476,72 @@ class DefaultRightsWriterTest
     void addRightsWithSubjectsFromAnotherWikiOnSpace() throws XWikiException
     {
         // TO BE implemented
+    }
+
+    private void copyRuleIntoBaseObjects(EntityReference whereToSaveRules, EntityReference rightsClassReference)
+        throws XWikiException
+    {
+        // copy a rule in the same object & test if it copied all the fields
+        WritableSecurityRule dumbRule = new WritableSecurityRuleImpl(Collections.emptyList(), Collections.emptyList(),
+            new RightSet(Right.EDIT, Right.COMMENT, Right.VIEW), RuleState.DENY);
+
+        rightsWriter.saveRules(Collections.singletonList(dumbRule), whereToSaveRules);
+
+        XWikiDocument document = null;
+        if (EntityType.SPACE == whereToSaveRules.getType()) {
+            DocumentReference spaceWebPreferencesRef = new DocumentReference(XWIKI_WEB_PREFERENCES,
+                (SpaceReference) whereToSaveRules);
+            document =
+                oldcore.getSpyXWiki().getDocument(spaceWebPreferencesRef, oldcore.getXWikiContext());
+        } else if (EntityType.DOCUMENT == whereToSaveRules.getType()) {
+            document = oldcore.getSpyXWiki().getDocument(whereToSaveRules, oldcore.getXWikiContext());
+        }
+        assertNotNull(document);
+        List<BaseObject> objects = document.getXObjects(rightsClassReference);
+        BaseObject right = objects.get(0);
+
+        // before
+        assertEquals(Collections.emptyList(), UsersClass.getListFromString(right.getLargeStringValue("users")));
+        assertEquals(Collections.emptyList(), GroupsClass.getListFromString(right.getLargeStringValue("groups")));
+
+        assertEquals(Arrays.asList("view", "edit", "comment"), LevelsClass.getListFromString(right.getLargeStringValue(
+            "levels")));
+        assertEquals(0, right.getIntValue(XWikiConstants.ALLOW_FIELD_NAME));
+
+        DocumentReference adminUserDocRef = new DocumentReference("xwiki", "XWiki", "XWikiAdmin");
+        WritableSecurityRule dumbRule2 = new WritableSecurityRuleImpl(Collections.singletonList(adminUserDocRef),
+            Collections.singletonList(adminUserDocRef), new RightSet(Right.VIEW), RuleState.ALLOW);
+
+        rightsWriter.copyRuleIntoBaseObject(right, dumbRule2);
+
+        objects = document.getXObjects(rightsClassReference);
+        right = objects.get(0);
+        assertEquals(Collections.singletonList("XWiki.XWikiAdmin"),
+            UsersClass.getListFromString(right.getLargeStringValue("users")));
+        assertEquals(Collections.singletonList("XWiki.XWikiAdmin"),
+            GroupsClass.getListFromString(right.getLargeStringValue("groups")));
+
+        assertEquals(Collections.singletonList("view"), LevelsClass.getListFromString(right.getLargeStringValue(
+            "levels")));
+        assertEquals(1, right.getIntValue(XWikiConstants.ALLOW_FIELD_NAME));
+    }
+
+    /**
+     * Helper function to setup manatory classes on a different subwiki than the main wiki.
+     *
+     * @param wikiname the wiki name to initialize mandatory classes on
+     */
+    private void initializeMandatoryDocsOnWiki(String wikiname)
+    {
+        String oldWikiId = this.oldcore.getXWikiContext().getWikiId();
+        try {
+            this.oldcore.getXWikiContext().setWikiId(wikiname);
+            this.oldcore.getSpyXWiki().initializeMandatoryDocuments(this.oldcore.getXWikiContext());
+        } catch (Exception e) {
+            // Dunno what else to do, but definitely I should do something smarter
+            e.printStackTrace();
+        } finally {
+            this.oldcore.getXWikiContext().setWikiId(oldWikiId);
+        }
     }
 }
