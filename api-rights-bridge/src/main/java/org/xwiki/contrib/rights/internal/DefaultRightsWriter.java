@@ -75,7 +75,7 @@ public class DefaultRightsWriter extends AbstractRightsWriter
     private Provider<XWikiContext> xcontextProvider;
 
     @Inject
-    @Named("local")
+    @Named("compactwiki")
     private EntityReferenceSerializer<String> entityReferenceSerializer;
 
     /**
@@ -137,7 +137,7 @@ public class DefaultRightsWriter extends AbstractRightsWriter
             if (null != groups) {
                 BaseProperty<?> groupsProperty = groups.fromStringArray(
                     rule.getGroups().stream()
-                        .map(k -> entityReferenceSerializer.serialize(k))
+                        .map(k -> entityReferenceSerializer.serialize(k, right.getDocumentReference()))
                         .toArray(String[]::new)
                 );
                 right.set(GROUPS_FIELD_RIGHTS_OBJECT, groupsProperty.getValue(), getXContext());
@@ -146,7 +146,7 @@ public class DefaultRightsWriter extends AbstractRightsWriter
             if (null != users) {
                 BaseProperty<?> usersProperty = users.fromStringArray(
                     rule.getUsers().stream()
-                        .map(k -> entityReferenceSerializer.serialize(k))
+                        .map(k -> entityReferenceSerializer.serialize(k, right.getDocumentReference()))
                         .toArray(String[]::new)
                 );
                 right.set(USERS_FIELD_RIGHTS_OBJECT, usersProperty.getValue(), getXContext());
