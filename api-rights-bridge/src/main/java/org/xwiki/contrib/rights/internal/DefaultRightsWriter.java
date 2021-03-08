@@ -192,6 +192,7 @@ public class DefaultRightsWriter extends AbstractRightsWriter
             }
         }
 
+        document.setAuthorReference(getXContext().getUserReference());
         // In the end, save the document
         getXWiki().saveDocument(document, getXContext());
     }
@@ -232,6 +233,7 @@ public class DefaultRightsWriter extends AbstractRightsWriter
         for (ReadableSecurityRule rule : rules) {
             addRightObjectToDocument(rule, doc, rightsClass, getXContext());
         }
+        doc.setAuthorReference(getXContext().getUserReference());
         // All the objects were added, save the document. Either all rules were saved, either none of them.
         getXWiki().saveDocument(doc, getXContext());
     }
