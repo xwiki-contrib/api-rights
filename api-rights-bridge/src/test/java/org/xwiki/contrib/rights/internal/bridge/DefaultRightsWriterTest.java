@@ -475,7 +475,33 @@ class DefaultRightsWriterTest
     @Test
     void addRightsWithSubjectsFromAnotherWikiOnSpace() throws XWikiException
     {
-        // TO BE implemented
+        SpaceReference spaceToSetRights = new SpaceReference("xwiki", "MySpace");
+
+        DocumentReference userReference = new DocumentReference("XWikiAdmin", new SpaceReference("XWiki",
+            new WikiReference("subwiki")));
+
+        DocumentReference userReferenceFromSameWiki = new DocumentReference("SimpleUser", new SpaceReference("Space",
+            new WikiReference("xwiki")));
+
+        DocumentReference groupReference = new DocumentReference("XWikiAllGroup", new SpaceReference("Space",
+            new WikiReference("anotherWiki")));
+
+        WritableSecurityRule writableSecurityRule =
+            new WritableSecurityRuleImpl(Collections.singletonList(groupReference),
+                Arrays.asList(userReference, userReferenceFromSameWiki), new RightSet(Right.EDIT, Right.VIEW,
+                Right.COMMENT), RuleState.DENY);
+
+        rightsWriter.saveRules(Collections.singletonList(writableSecurityRule), spaceToSetRights);
+
+        XWikiDocument document = oldcore.getSpyXWiki().getDocument(new DocumentReference(XWIKI_WEB_PREFERENCES,
+            spaceToSetRights), oldcore.getXWikiContext());
+
+        assertEquals("anotherWiki:Space.XWikiAllGroup",
+            document.getXObjects(XWIKI_GLOBAL_RIGHTS_CLASS).get(0).getLargeStringValue(GROUPS_PROPERTY));
+
+        assertEquals(Arrays.asList("subwiki:XWiki.XWikiAdmin", "Space.SimpleUser"),
+            UsersClass.getListFromString(
+                document.getXObjects(XWIKI_GLOBAL_RIGHTS_CLASS).get(0).getLargeStringValue(USERS_PROPERTY)));
     }
 
     private void copyRuleIntoBaseObjects(EntityReference whereToSaveRules, EntityReference rightsClassReference)
@@ -527,7 +553,7 @@ class DefaultRightsWriterTest
     }
 
     /**
-     * Helper function to setup manatory classes on a different subwiki than the main wiki.
+     * Helper function to setup mandatory classes on a different subwiki than the main wiki.
      *
      * @param wikiname the wiki name to initialize mandatory classes on
      */
