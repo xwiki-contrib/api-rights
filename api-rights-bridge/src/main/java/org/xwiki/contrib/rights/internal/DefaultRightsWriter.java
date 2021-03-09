@@ -62,7 +62,7 @@ public class DefaultRightsWriter extends AbstractRightsWriter
     private static final String XWIKI_PREFERENCES = "XWikiPreferences";
 
     @Inject
-    @Named("incrementingnumbers")
+    @Named("recycling")
     private RulesObjectWriter objectsWriter;
 
     @Inject
