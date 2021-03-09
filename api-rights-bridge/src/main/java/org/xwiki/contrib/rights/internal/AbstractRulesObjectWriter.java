@@ -65,7 +65,6 @@ public abstract class AbstractRulesObjectWriter implements RulesObjectWriter
      */
     void copyRuleIntoBaseObject(BaseObject right, ReadableSecurityRule rule, XWikiContext context)
     {
-        // TODO: empty the object before copying into it. Validate by writing test first.
         if (null != right) {
             if (null != rule.getState()) {
                 right.setIntValue(XWikiConstants.ALLOW_FIELD_NAME,
@@ -74,23 +73,32 @@ public abstract class AbstractRulesObjectWriter implements RulesObjectWriter
             PropertyClass groups = (PropertyClass) right.getXClass(context).get(GROUPS_FIELD_RIGHTS_OBJECT);
             PropertyClass users = (PropertyClass) right.getXClass(context).get(USERS_FIELD_RIGHTS_OBJECT);
             PropertyClass levels = (PropertyClass) right.getXClass(context).get(LEVELS_FIELD_RIGHTS_OBJECT);
-            if (null != groups && null != rule.getGroups()) {
-                BaseProperty<?> groupsProperty = groups.fromStringArray(rule.getGroups().stream()
-                    .map(k -> entityReferenceSerializer.serialize(k, right.getDocumentReference()))
-                    .toArray(String[]::new));
+            if (null != groups) {
+                BaseProperty<?> groupsProperty = groups.fromValue("");
+                if (null != rule.getGroups()) {
+                    groupsProperty = groups.fromStringArray(rule.getGroups().stream()
+                        .map(k -> entityReferenceSerializer.serialize(k, right.getDocumentReference()))
+                        .toArray(String[]::new));
+                }
                 right.set(GROUPS_FIELD_RIGHTS_OBJECT, groupsProperty.getValue(), context);
             }
 
-            if (null != users && null != rule.getUsers()) {
-                BaseProperty<?> usersProperty = users.fromStringArray(rule.getUsers().stream()
-                    .map(k -> entityReferenceSerializer.serialize(k, right.getDocumentReference()))
-                    .toArray(String[]::new));
+            if (null != users) {
+                BaseProperty<?> usersProperty = users.fromString("");
+                if (null != rule.getUsers()) {
+                    usersProperty = users.fromStringArray(rule.getUsers().stream()
+                        .map(k -> entityReferenceSerializer.serialize(k, right.getDocumentReference()))
+                        .toArray(String[]::new));
+                }
                 right.set(USERS_FIELD_RIGHTS_OBJECT, usersProperty.getValue(), context);
             }
 
-            if (null != levels && null != rule.getRights()) {
-                BaseProperty<?> levelsProperty =
-                    levels.fromStringArray(rule.getRights().stream().map(Right::getName).toArray(String[]::new));
+            if (null != levels) {
+                BaseProperty<?> levelsProperty = levels.fromString("");
+                if (null != rule.getRights()) {
+                    levelsProperty =
+                        levels.fromStringArray(rule.getRights().stream().map(Right::getName).toArray(String[]::new));
+                }
                 right.set(LEVELS_FIELD_RIGHTS_OBJECT, levelsProperty.getValue(), context);
             }
         }
