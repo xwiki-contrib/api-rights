@@ -134,7 +134,7 @@ public class DefaultRightsWriter extends AbstractRightsWriter
             PropertyClass groups = (PropertyClass) right.getXClass(getXContext()).get(GROUPS_FIELD_RIGHTS_OBJECT);
             PropertyClass users = (PropertyClass) right.getXClass(getXContext()).get(USERS_FIELD_RIGHTS_OBJECT);
             PropertyClass levels = (PropertyClass) right.getXClass(getXContext()).get(LEVELS_FIELD_RIGHTS_OBJECT);
-            if (null != groups) {
+            if (null != groups && null != rule.getGroups()) {
                 BaseProperty<?> groupsProperty = groups.fromStringArray(
                     rule.getGroups().stream()
                         .map(k -> entityReferenceSerializer.serialize(k, right.getDocumentReference()))
@@ -143,7 +143,7 @@ public class DefaultRightsWriter extends AbstractRightsWriter
                 right.set(GROUPS_FIELD_RIGHTS_OBJECT, groupsProperty.getValue(), getXContext());
             }
 
-            if (null != users) {
+            if (null != users && null != rule.getUsers()) {
                 BaseProperty<?> usersProperty = users.fromStringArray(
                     rule.getUsers().stream()
                         .map(k -> entityReferenceSerializer.serialize(k, right.getDocumentReference()))
@@ -152,7 +152,7 @@ public class DefaultRightsWriter extends AbstractRightsWriter
                 right.set(USERS_FIELD_RIGHTS_OBJECT, usersProperty.getValue(), getXContext());
             }
 
-            if (null != levels) {
+            if (null != levels && null != rule.getRights()) {
                 BaseProperty<?> levelsProperty = levels.fromStringArray(
                     rule.getRights().stream()
                         .map(Right::getName)
