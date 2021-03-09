@@ -116,20 +116,16 @@ public class DefaultRightsWriter extends AbstractRightsWriter
                 default:
                     throw new UnsupportedOperationException("Could not set rights for the given reference.");
             }
-            if (documentReference != null && rightsClassReference != null) {
-                // get document to perform changes on
-                XWikiContext context = getXContext();
-                XWikiDocument doc = getXWiki().getDocument(documentReference, context);
+            // get document to perform changes on
+            XWikiContext context = getXContext();
+            XWikiDocument doc = getXWiki().getDocument(documentReference, context);
 
-                // write objects according to the chosen strategy
-                rulesWriter.persistRulesToObjects(rules, doc, rightsClassReference, context);
+            // write objects according to the chosen strategy
+            rulesWriter.persistRulesToObjects(rules, doc, rightsClassReference, context);
 
-                // In the end, save the document
-                doc.setAuthorReference(context.getUserReference());
-                getXWiki().saveDocument(doc, context);
-            } else {
-                // TODO: figure it out. Exception?
-            }
+            // In the end, save the document
+            doc.setAuthorReference(context.getUserReference());
+            getXWiki().saveDocument(doc, context);
         }
     }
 
