@@ -247,4 +247,112 @@ public class RecyclingStrategyRightsWriterTest
             LevelsClass.getListFromString(right.getLargeStringValue("levels")));
         assertEquals(1, right.getIntValue(XWikiConstants.ALLOW_FIELD_NAME));
     }
+
+    /**
+     * Replace a rule with another rule that uses null for one of the subjects (groups or users) and make sure there are
+     * no leftovers in the recycled object.
+     *
+     * @throws XWikiException
+     * @throws ComponentLookupException
+     */
+    @Test
+    void testReplaceWithRuleWithNullSubject() throws XWikiException, ComponentLookupException
+    {
+        EntityReference saveOn = new SpaceReference("xwiki", "Space", "MySpace");
+        WritableSecurityRule fullySetRule = new WritableSecurityRuleImpl(
+            Collections.singletonList(new DocumentReference("xwiki", "XWiki", "XWikiAllGroup")),
+            Collections.singletonList(new DocumentReference("xwiki", "XWiki", "Admin")), new RightSet(Right.VIEW),
+            RuleState.ALLOW);
+
+        DocumentReference testedDocReference =
+            new DocumentReference("xwiki", Arrays.asList("Space", "MySpace"), XWIKI_WEB_PREFERENCES);
+
+        rightsWriter.saveRules(Collections.singletonList(fullySetRule), saveOn, "recycling");
+
+        XWikiDocument testedDoc = oldcore.getSpyXWiki().getDocument(testedDocReference, oldcore.getXWikiContext());
+        assertNotNull(testedDoc);
+        assertEquals(1, testedDoc.getXObjects(XWIKI_GLOBAL_RIGHTS_CLASS).size());
+
+        // before
+        BaseObject testedObj = testedDoc.getXObject(XWIKI_GLOBAL_RIGHTS_CLASS);
+        assertObject("XWiki.XWikiAllGroup", "XWiki.Admin", "view", 1, testedObj);
+
+        // replace rule with another rule, that has a null subject (e.g. users)
+        WritableSecurityRule nullSubjectRule = new WritableSecurityRuleImpl(
+            Collections.singletonList(new DocumentReference("xwiki", "XWiki", "XWikiAllGroup")), null,
+            new RightSet(Right.EDIT), RuleState.ALLOW);
+
+        rightsWriter.saveRules(Collections.singletonList(nullSubjectRule), saveOn, "recycling");
+
+        testedDoc = oldcore.getSpyXWiki().getDocument(testedDocReference, oldcore.getXWikiContext());
+        assertNotNull(testedDoc);
+        assertEquals(1, testedDoc.getXObjects(XWIKI_GLOBAL_RIGHTS_CLASS).size());
+
+        // after: the users are empty, group stays the same as it wasn't changed and rights change also
+        testedObj = testedDoc.getXObject(XWIKI_GLOBAL_RIGHTS_CLASS);
+        assertObject("XWiki.XWikiAllGroup", "", "edit", 1, testedObj);
+    }
+
+    /**
+     * Replace a rule with another rule that uses an empty list for one of the subjects (groups or users) and make sure
+     * there are no leftovers in the recycled object.
+     *
+     * @throws XWikiException
+     * @throws ComponentLookupException
+     */
+    @Test
+    void testReplaceWithRuleWithEmptySubject() throws XWikiException, ComponentLookupException
+    {
+        EntityReference saveOn = new SpaceReference("xwiki", "Space", "MySpace");
+        WritableSecurityRule fullySetRule = new WritableSecurityRuleImpl(
+            Collections.singletonList(new DocumentReference("xwiki", "XWiki", "XWikiAllGroup")),
+            Collections.singletonList(new DocumentReference("xwiki", "XWiki", "Admin")), new RightSet(Right.VIEW),
+            RuleState.ALLOW);
+
+        DocumentReference testedDocReference =
+            new DocumentReference("xwiki", Arrays.asList("Space", "MySpace"), XWIKI_WEB_PREFERENCES);
+
+        rightsWriter.saveRules(Collections.singletonList(fullySetRule), saveOn, "recycling");
+
+        XWikiDocument testedDoc = oldcore.getSpyXWiki().getDocument(testedDocReference, oldcore.getXWikiContext());
+        assertNotNull(testedDoc);
+        assertEquals(1, testedDoc.getXObjects(XWIKI_GLOBAL_RIGHTS_CLASS).size());
+
+        // before
+        BaseObject testedObj = testedDoc.getXObject(XWIKI_GLOBAL_RIGHTS_CLASS);
+        assertObject("XWiki.XWikiAllGroup", "XWiki.Admin", "view", 1, testedObj);
+
+        // replace rule with another rule, that has an empty list subject (e.g. groups)
+        WritableSecurityRule emptySubjectRule = new WritableSecurityRuleImpl(Collections.emptyList(),
+            Collections.singletonList(new DocumentReference("xwiki", "XWiki", "Administrator")),
+            new RightSet(Right.EDIT), RuleState.ALLOW);
+
+        rightsWriter.saveRules(Collections.singletonList(emptySubjectRule), saveOn, "recycling");
+
+        testedDoc = oldcore.getSpyXWiki().getDocument(testedDocReference, oldcore.getXWikiContext());
+        assertNotNull(testedDoc);
+        assertEquals(1, testedDoc.getXObjects(XWIKI_GLOBAL_RIGHTS_CLASS).size());
+
+        // after: the groups are empty, user and rights change, as they changed in the rule
+        testedObj = testedDoc.getXObject(XWIKI_GLOBAL_RIGHTS_CLASS);
+        assertObject("", "XWiki.Administrator", "edit", 1, testedObj);
+    }
+
+    /**
+     * Helps to assert the state of an object. Since it compares the properties as strings, use only for single values
+     * of the tested metadata, since you cannot rely on the order of serialization.
+     *
+     * @param groups expected groups, as string
+     * @param users expected users, as string
+     * @param rights expected rights, as string
+     * @param allow expected allow as number (1 for allow, 0 for deny)
+     * @param testedObj the object to test previous values on
+     */
+    private void assertObject(String groups, String users, String rights, int allow, BaseObject testedObj)
+    {
+        assertEquals(users, testedObj.getLargeStringValue(XWikiConstants.USERS_FIELD_NAME));
+        assertEquals(groups, testedObj.getLargeStringValue(XWikiConstants.GROUPS_FIELD_NAME));
+        assertEquals(rights, testedObj.getLargeStringValue(XWikiConstants.LEVELS_FIELD_NAME));
+        assertEquals(allow, testedObj.getIntValue(XWikiConstants.ALLOW_FIELD_NAME));
+    }
 }
