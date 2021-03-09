@@ -96,7 +96,7 @@ public class RightsAPIService implements ScriptService
     }
 
     /**
-     * Saves the passed rules.
+     * Saves the passed rules. TODO: add API for the named persistence strategy
      *
      * @param rules the rules to save.
      * @param reference the reference to save rules on. In order to actually save the rules, the reference must be a

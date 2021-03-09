@@ -27,24 +27,20 @@ import javax.inject.Provider;
 import javax.inject.Singleton;
 
 import org.xwiki.component.annotation.Component;
+import org.xwiki.component.manager.ComponentLookupException;
+import org.xwiki.component.manager.ComponentManager;
+import org.xwiki.contrib.rights.RulesObjectWriter;
 import org.xwiki.model.EntityType;
 import org.xwiki.model.reference.DocumentReference;
 import org.xwiki.model.reference.EntityReference;
-import org.xwiki.model.reference.EntityReferenceSerializer;
 import org.xwiki.model.reference.SpaceReference;
 import org.xwiki.model.reference.WikiReference;
 import org.xwiki.security.authorization.ReadableSecurityRule;
-import org.xwiki.security.authorization.Right;
-import org.xwiki.security.authorization.RuleState;
-import org.xwiki.security.internal.XWikiConstants;
 
 import com.xpn.xwiki.XWiki;
 import com.xpn.xwiki.XWikiContext;
 import com.xpn.xwiki.XWikiException;
 import com.xpn.xwiki.doc.XWikiDocument;
-import com.xpn.xwiki.objects.BaseObject;
-import com.xpn.xwiki.objects.BaseProperty;
-import com.xpn.xwiki.objects.classes.PropertyClass;
 
 /**
  * @version $Id$
@@ -53,12 +49,6 @@ import com.xpn.xwiki.objects.classes.PropertyClass;
 @Singleton
 public class DefaultRightsWriter extends AbstractRightsWriter
 {
-    private static final String USERS_FIELD_RIGHTS_OBJECT = "users";
-
-    private static final String GROUPS_FIELD_RIGHTS_OBJECT = "groups";
-
-    private static final String LEVELS_FIELD_RIGHTS_OBJECT = "levels";
-
     private static final String XWIKI_SPACE = "XWiki";
 
     private static final EntityReference XWIKI_RIGHTS_CLASS =
@@ -72,11 +62,22 @@ public class DefaultRightsWriter extends AbstractRightsWriter
     private static final String XWIKI_PREFERENCES = "XWikiPreferences";
 
     @Inject
-    private Provider<XWikiContext> xcontextProvider;
+    @Named("incrementingnumbers")
+    private RulesObjectWriter objectsWriter;
 
     @Inject
-    @Named("compactwiki")
-    private EntityReferenceSerializer<String> entityReferenceSerializer;
+    private ComponentManager cm;
+
+    @Inject
+    private Provider<XWikiContext> xcontextProvider;
+
+    @Override
+    public void saveRules(List<ReadableSecurityRule> rules, EntityReference reference, String persistenceStrategyName)
+        throws XWikiException, UnsupportedOperationException, ComponentLookupException
+    {
+        RulesObjectWriter writer = cm.getInstance(RulesObjectWriter.class, persistenceStrategyName);
+        saveRules(rules, reference, writer);
+    }
 
     /**
      * One rule will correspond to one right object.
@@ -87,114 +88,49 @@ public class DefaultRightsWriter extends AbstractRightsWriter
     public void saveRules(List<ReadableSecurityRule> rules, EntityReference reference)
         throws XWikiException, UnsupportedOperationException
     {
+        saveRules(rules, reference, objectsWriter);
+    }
+
+    private void saveRules(List<ReadableSecurityRule> rules, EntityReference reference, RulesObjectWriter rulesWriter)
+        throws XWikiException, UnsupportedOperationException
+    {
         // By deleting the objects, the object number will continue from the number of the deleted object.
         if (null != rules && null != reference) {
             DocumentReference documentReference;
+            EntityReference rightsClassReference;
             switch (reference.getType()) {
                 case WIKI:
-                    documentReference = new DocumentReference(XWIKI_PREFERENCES, new SpaceReference(XWIKI_SPACE,
-                        new WikiReference(reference)));
-                    clearRightsOnPage(documentReference, true);
-                    addRulesToDocumentReference(rules, documentReference, true);
+                    documentReference = new DocumentReference(XWIKI_PREFERENCES,
+                        new SpaceReference(XWIKI_SPACE, new WikiReference(reference)));
+                    rightsClassReference = XWIKI_GLOBAL_RIGHTS_CLASS;
                     break;
                 case SPACE:
                     documentReference = new DocumentReference(XWIKI_WEB_PREFERENCES, new SpaceReference(reference));
-                    clearRightsOnPage(documentReference, true);
-                    addRulesToDocumentReference(rules, documentReference, true);
+                    rightsClassReference = XWIKI_GLOBAL_RIGHTS_CLASS;
                     break;
                 case DOCUMENT:
                     // The current reference corresponds to a terminal page.
                     documentReference = new DocumentReference(reference);
-                    clearRightsOnPage(documentReference, false);
-                    addRulesToDocumentReference(rules, documentReference, false);
+                    rightsClassReference = XWIKI_RIGHTS_CLASS;
                     break;
                 default:
                     throw new UnsupportedOperationException("Could not set rights for the given reference.");
             }
-        }
-    }
+            if (documentReference != null && rightsClassReference != null) {
+                // get document to perform changes on
+                XWikiContext context = getXContext();
+                XWikiDocument doc = getXWiki().getDocument(documentReference, context);
 
-    /**
-     * Translates a {@link ReadableSecurityRule} into a {@link BaseObject}.
-     * <p>
-     * It's the caller responsibility to call this on a valid right object (depending on what's the desired behavior,
-     * the <code>right</code>'s XClass should be, but not limited to {@link #XWIKI_RIGHTS_CLASS} or {@link
-     * #XWIKI_GLOBAL_RIGHTS_CLASS}.
-     *
-     * @param right the BaseObject to which the properties of the <code>rule</code> will be copied to
-     * @param rule
-     */
-    public void copyRuleIntoBaseObject(BaseObject right, ReadableSecurityRule rule)
-    {
-        if (null != right) {
-            if (null != rule.getState()) {
-                right.setIntValue(XWikiConstants.ALLOW_FIELD_NAME,
-                    rule.getState().getValue() == RuleState.DENY.getValue() ? 0 : 1);
-            }
-            PropertyClass groups = (PropertyClass) right.getXClass(getXContext()).get(GROUPS_FIELD_RIGHTS_OBJECT);
-            PropertyClass users = (PropertyClass) right.getXClass(getXContext()).get(USERS_FIELD_RIGHTS_OBJECT);
-            PropertyClass levels = (PropertyClass) right.getXClass(getXContext()).get(LEVELS_FIELD_RIGHTS_OBJECT);
-            if (null != groups && null != rule.getGroups()) {
-                BaseProperty<?> groupsProperty = groups.fromStringArray(
-                    rule.getGroups().stream()
-                        .map(k -> entityReferenceSerializer.serialize(k, right.getDocumentReference()))
-                        .toArray(String[]::new)
-                );
-                right.set(GROUPS_FIELD_RIGHTS_OBJECT, groupsProperty.getValue(), getXContext());
-            }
+                // write objects according to the chosen strategy
+                rulesWriter.persistRulesToObjects(rules, doc, rightsClassReference, context);
 
-            if (null != users && null != rule.getUsers()) {
-                BaseProperty<?> usersProperty = users.fromStringArray(
-                    rule.getUsers().stream()
-                        .map(k -> entityReferenceSerializer.serialize(k, right.getDocumentReference()))
-                        .toArray(String[]::new)
-                );
-                right.set(USERS_FIELD_RIGHTS_OBJECT, usersProperty.getValue(), getXContext());
-            }
-
-            if (null != levels && null != rule.getRights()) {
-                BaseProperty<?> levelsProperty = levels.fromStringArray(
-                    rule.getRights().stream()
-                        .map(Right::getName)
-                        .toArray(String[]::new)
-                );
-                right.set(LEVELS_FIELD_RIGHTS_OBJECT, levelsProperty.getValue(), getXContext());
+                // In the end, save the document
+                doc.setAuthorReference(context.getUserReference());
+                getXWiki().saveDocument(doc, context);
+            } else {
+                // TODO: figure it out. Exception?
             }
         }
-    }
-
-    /**
-     * @param rules for which Right BaseObjects will be created and added to the <code>document</code>
-     * @param document where the <code>rules</code> are saved
-     * @param classReference {@link #XWIKI_GLOBAL_RIGHTS_CLASS} or {@link #XWIKI_RIGHTS_CLASS}, depending on the
-     *     {@link EntityType} of the <code>document</code>
-     * @throws XWikiException
-     */
-    public void addRightsByRecyclingObjects(List<ReadableSecurityRule> rules, XWikiDocument document,
-        EntityReference classReference) throws XWikiException
-    {
-        // TODO: the parameter type should be DocumentReference
-        List<BaseObject> storedObjects = document.getXObjects(classReference);
-        if (rules.size() > storedObjects.size()) {
-            for (int i = 0; i < storedObjects.size(); ++i) {
-                copyRuleIntoBaseObject(storedObjects.get(i), rules.get(i));
-            }
-            for (int i = storedObjects.size(); i < rules.size(); ++i) {
-                // Create new objects in the document.
-                addRightObjectToDocument(rules.get(i), document, classReference, getXContext());
-            }
-        } else {
-            for (int i = 0; i < rules.size(); ++i) {
-                copyRuleIntoBaseObject(storedObjects.get(i), rules.get(i));
-            }
-            while (rules.size() != storedObjects.size()) {
-                storedObjects.remove(storedObjects.size() - 1);
-            }
-        }
-
-        document.setAuthorReference(getXContext().getUserReference());
-        // In the end, save the document
-        getXWiki().saveDocument(document, getXContext());
     }
 
     /**
@@ -211,49 +147,5 @@ public class DefaultRightsWriter extends AbstractRightsWriter
     private XWiki getXWiki()
     {
         return getXContext().getWiki();
-    }
-
-    /**
-     * @param rules containing the actual security rules that will be translated into BaseObjects
-     * @param reference the reference on which the objects will be added
-     * @param isGlobal if true, the created BaseObjects will be of type XWikiGlobalRights. Else, XWikiRights objects
-     *     will be created.
-     */
-    private void addRulesToDocumentReference(List<ReadableSecurityRule> rules, DocumentReference reference,
-        boolean isGlobal)
-        throws XWikiException
-    {
-        XWikiDocument doc = getXWiki().getDocument(reference, getXContext());
-        EntityReference rightsClass;
-        if (isGlobal) {
-            rightsClass = XWIKI_GLOBAL_RIGHTS_CLASS;
-        } else {
-            rightsClass = XWIKI_RIGHTS_CLASS;
-        }
-        for (ReadableSecurityRule rule : rules) {
-            addRightObjectToDocument(rule, doc, rightsClass, getXContext());
-        }
-        doc.setAuthorReference(getXContext().getUserReference());
-        // All the objects were added, save the document. Either all rules were saved, either none of them.
-        getXWiki().saveDocument(doc, getXContext());
-    }
-
-    /**
-     * @param rule for which the BaseObject will be created
-     */
-    private void addRightObjectToDocument(ReadableSecurityRule rule, XWikiDocument doc, EntityReference rightsClass,
-        XWikiContext context) throws XWikiException, IllegalArgumentException
-    {
-        BaseObject object = doc.newXObject(rightsClass, context);
-        copyRuleIntoBaseObject(object, rule);
-    }
-
-    private void clearRightsOnPage(DocumentReference reference, boolean areGlobalRights) throws XWikiException
-    {
-        if (areGlobalRights) {
-            getXWiki().getDocument(reference, getXContext()).removeXObjects(XWIKI_GLOBAL_RIGHTS_CLASS);
-        } else {
-            getXWiki().getDocument(reference, getXContext()).removeXObjects(XWIKI_RIGHTS_CLASS);
-        }
     }
 }

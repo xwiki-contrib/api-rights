@@ -66,6 +66,8 @@
     <commons.version>12.10.4</commons.version>
     <platform.version>12.10.4</platform.version>
     <xwiki.enforcer.skip>true</xwiki.enforcer.skip>
+    <!-- Skip the execution of revapi, at least for now. -->
+    <xwiki.revapi.skip>true</xwiki.revapi.skip>
   </properties>
   <dependencies>
     <dependency>
