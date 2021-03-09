@@ -27,6 +27,7 @@ import javax.inject.Named;
 import javax.inject.Provider;
 import javax.inject.Singleton;
 
+import org.slf4j.Logger;
 import org.xwiki.component.annotation.Component;
 import org.xwiki.contrib.rights.RightsReader;
 import org.xwiki.contrib.rights.RightsWriter;
@@ -70,7 +71,8 @@ public class RightsAPIService implements ScriptService
     @Inject
     private DocumentReferenceResolver<String> documentReferenceResolver;
 
-    // TODO: inject a logger & log the operations.
+    @Inject
+    private Logger logger;
 
     /**
      * @param ref the {@link EntityReference} for which the rules will be retrieved. Depending on the {@link
@@ -111,6 +113,7 @@ public class RightsAPIService implements ScriptService
                 return true;
             } catch (UnsupportedOperationException | IllegalArgumentException | XWikiException e) {
                 xcontextProvider.get().put(ERROR_MESSAGE, e.toString());
+                logger.error(e.toString());
             }
         }
         return false;
