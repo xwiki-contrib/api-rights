@@ -256,7 +256,7 @@ public class RecyclingStrategyRightsWriterTest
      * @throws ComponentLookupException
      */
     @Test
-    void testReplaceWithRuleWithNullSubject() throws XWikiException, ComponentLookupException
+    void testReplaceWithRuleWithNullSubjectUsers() throws XWikiException, ComponentLookupException
     {
         EntityReference saveOn = new SpaceReference("xwiki", "Space", "MySpace");
         WritableSecurityRule fullySetRule = new WritableSecurityRuleImpl(
@@ -291,6 +291,51 @@ public class RecyclingStrategyRightsWriterTest
         // after: the users are empty, group stays the same as it wasn't changed and rights change also
         testedObj = testedDoc.getXObject(XWIKI_GLOBAL_RIGHTS_CLASS);
         assertObject("XWiki.XWikiAllGroup", "", "edit", 1, testedObj);
+    }
+
+    /**
+     * Replace a rule with another rule that uses null for one of the subjects (groups or users) and make sure there are
+     * no leftovers in the recycled object.
+     *
+     * @throws XWikiException
+     * @throws ComponentLookupException
+     */
+    @Test
+    void testReplaceWithRuleWithNullSubjectGroups() throws XWikiException, ComponentLookupException
+    {
+        EntityReference saveOn = new SpaceReference("xwiki", "Space", "MySpace");
+        WritableSecurityRule fullySetRule = new WritableSecurityRuleImpl(
+            Collections.singletonList(new DocumentReference("xwiki", "XWiki", "XWikiAllGroup")),
+            Collections.singletonList(new DocumentReference("xwiki", "XWiki", "Admin")), new RightSet(Right.VIEW),
+            RuleState.ALLOW);
+
+        DocumentReference testedDocReference =
+            new DocumentReference("xwiki", Arrays.asList("Space", "MySpace"), XWIKI_WEB_PREFERENCES);
+
+        rightsWriter.saveRules(Collections.singletonList(fullySetRule), saveOn, "recycling");
+
+        XWikiDocument testedDoc = oldcore.getSpyXWiki().getDocument(testedDocReference, oldcore.getXWikiContext());
+        assertNotNull(testedDoc);
+        assertEquals(1, testedDoc.getXObjects(XWIKI_GLOBAL_RIGHTS_CLASS).size());
+
+        // before
+        BaseObject testedObj = testedDoc.getXObject(XWIKI_GLOBAL_RIGHTS_CLASS);
+        assertObject("XWiki.XWikiAllGroup", "XWiki.Admin", "view", 1, testedObj);
+
+        // replace rule with another rule, that has a null subject (e.g. users)
+        WritableSecurityRule nullSubjectRule = new WritableSecurityRuleImpl(null,
+            Collections.singletonList(new DocumentReference("xwiki", "XWiki", "Admin")), new RightSet(Right.EDIT),
+            RuleState.ALLOW);
+
+        rightsWriter.saveRules(Collections.singletonList(nullSubjectRule), saveOn, "recycling");
+
+        testedDoc = oldcore.getSpyXWiki().getDocument(testedDocReference, oldcore.getXWikiContext());
+        assertNotNull(testedDoc);
+        assertEquals(1, testedDoc.getXObjects(XWIKI_GLOBAL_RIGHTS_CLASS).size());
+
+        // after: the groups are empty, user stays the same as it wasn't changed and rights change also
+        testedObj = testedDoc.getXObject(XWIKI_GLOBAL_RIGHTS_CLASS);
+        assertObject("", "XWiki.Admin", "edit", 1, testedObj);
     }
 
     /**
@@ -336,6 +381,97 @@ public class RecyclingStrategyRightsWriterTest
         // after: the groups are empty, user and rights change, as they changed in the rule
         testedObj = testedDoc.getXObject(XWIKI_GLOBAL_RIGHTS_CLASS);
         assertObject("", "XWiki.Administrator", "edit", 1, testedObj);
+    }
+
+    /**
+     * Replace a rule with another rule that uses null for the rights set and make sure there are no leftovers in the
+     * recycled object.
+     *
+     * @throws XWikiException
+     * @throws ComponentLookupException
+     */
+    @Test
+    void testReplaceWithRuleWithNullRights() throws XWikiException, ComponentLookupException
+    {
+        EntityReference saveOn = new SpaceReference("xwiki", "Space", "MySpace");
+        WritableSecurityRule fullySetRule = new WritableSecurityRuleImpl(
+            Collections.singletonList(new DocumentReference("xwiki", "XWiki", "XWikiAllGroup")),
+            Collections.singletonList(new DocumentReference("xwiki", "XWiki", "Admin")), new RightSet(Right.VIEW),
+            RuleState.ALLOW);
+
+        DocumentReference testedDocReference =
+            new DocumentReference("xwiki", Arrays.asList("Space", "MySpace"), XWIKI_WEB_PREFERENCES);
+
+        rightsWriter.saveRules(Collections.singletonList(fullySetRule), saveOn, "recycling");
+
+        XWikiDocument testedDoc = oldcore.getSpyXWiki().getDocument(testedDocReference, oldcore.getXWikiContext());
+        assertNotNull(testedDoc);
+        assertEquals(1, testedDoc.getXObjects(XWIKI_GLOBAL_RIGHTS_CLASS).size());
+
+        // before
+        BaseObject testedObj = testedDoc.getXObject(XWIKI_GLOBAL_RIGHTS_CLASS);
+        assertObject("XWiki.XWikiAllGroup", "XWiki.Admin", "view", 1, testedObj);
+
+        // replace rule with another rule, that has a null subject (e.g. users)
+        WritableSecurityRule nullSubjectRule = new WritableSecurityRuleImpl(
+            Collections.singletonList(new DocumentReference("xwiki", "XWiki", "XWikiAllGroup")),
+            Collections.singletonList(new DocumentReference("xwiki", "XWiki", "Admin")), null, RuleState.ALLOW);
+
+        rightsWriter.saveRules(Collections.singletonList(nullSubjectRule), saveOn, "recycling");
+
+        testedDoc = oldcore.getSpyXWiki().getDocument(testedDocReference, oldcore.getXWikiContext());
+        assertNotNull(testedDoc);
+        assertEquals(1, testedDoc.getXObjects(XWIKI_GLOBAL_RIGHTS_CLASS).size());
+
+        // after: all stays the same but rights are emptied.
+        testedObj = testedDoc.getXObject(XWIKI_GLOBAL_RIGHTS_CLASS);
+        assertObject("XWiki.XWikiAllGroup", "XWiki.Admin", "", 1, testedObj);
+    }
+
+    /**
+     * Replace a rule with another rule that uses null for the allow and check that it's set as allowing, since the
+     * default for the allow is true if a rule doesn't have the allow set.
+     *
+     * @throws XWikiException
+     * @throws ComponentLookupException
+     */
+    @Test
+    void testReplaceWithRuleWithNullAllow() throws XWikiException, ComponentLookupException
+    {
+        EntityReference saveOn = new SpaceReference("xwiki", "Space", "MySpace");
+        WritableSecurityRule fullySetRule = new WritableSecurityRuleImpl(
+            Collections.singletonList(new DocumentReference("xwiki", "XWiki", "XWikiAllGroup")),
+            Collections.singletonList(new DocumentReference("xwiki", "XWiki", "Admin")), new RightSet(Right.VIEW),
+            RuleState.DENY);
+
+        DocumentReference testedDocReference =
+            new DocumentReference("xwiki", Arrays.asList("Space", "MySpace"), XWIKI_WEB_PREFERENCES);
+
+        rightsWriter.saveRules(Collections.singletonList(fullySetRule), saveOn, "recycling");
+
+        XWikiDocument testedDoc = oldcore.getSpyXWiki().getDocument(testedDocReference, oldcore.getXWikiContext());
+        assertNotNull(testedDoc);
+        assertEquals(1, testedDoc.getXObjects(XWIKI_GLOBAL_RIGHTS_CLASS).size());
+
+        // before
+        BaseObject testedObj = testedDoc.getXObject(XWIKI_GLOBAL_RIGHTS_CLASS);
+        assertObject("XWiki.XWikiAllGroup", "XWiki.Admin", "view", 0, testedObj);
+
+        // replace rule with another rule, that has a null subject (e.g. users)
+        WritableSecurityRule nullSubjectRule = new WritableSecurityRuleImpl(
+            Collections.singletonList(new DocumentReference("xwiki", "XWiki", "XWikiAllGroup")),
+            Collections.singletonList(new DocumentReference("xwiki", "XWiki", "Admin")), new RightSet(Right.VIEW),
+            null);
+
+        rightsWriter.saveRules(Collections.singletonList(nullSubjectRule), saveOn, "recycling");
+
+        testedDoc = oldcore.getSpyXWiki().getDocument(testedDocReference, oldcore.getXWikiContext());
+        assertNotNull(testedDoc);
+        assertEquals(1, testedDoc.getXObjects(XWIKI_GLOBAL_RIGHTS_CLASS).size());
+
+        // all
+        testedObj = testedDoc.getXObject(XWIKI_GLOBAL_RIGHTS_CLASS);
+        assertObject("XWiki.XWikiAllGroup", "XWiki.Admin", "view", 1, testedObj);
     }
 
     /**
