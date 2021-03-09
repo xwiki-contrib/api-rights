@@ -191,20 +191,20 @@ public class RecyclingStrategyRightsWriterTest
     }
 
     @Test
-    void copyRuleIntoBaseObjectForGlobalRights() throws XWikiException, ComponentLookupException
+    void testReplaceWithSingleRuleOnSpace() throws XWikiException, ComponentLookupException
     {
-        copyRuleIntoBaseObjects(new SpaceReference("xwiki", "Space", "MySpace"), XWIKI_GLOBAL_RIGHTS_CLASS,
+        replaceWithSingleRule(new SpaceReference("xwiki", "Space", "MySpace"), XWIKI_GLOBAL_RIGHTS_CLASS,
             new DocumentReference("xwiki", Arrays.asList("Space", "MySpace"), XWIKI_WEB_PREFERENCES));
     }
 
     @Test
-    void copyRuleIntoBaseObjectForNormalRights() throws XWikiException, ComponentLookupException
+    void testReplaceWithSingleRuleOnPage() throws XWikiException, ComponentLookupException
     {
-        copyRuleIntoBaseObjects(new DocumentReference("xwiki", "space", "myPage"), XWIKI_RIGHTS_CLASS,
+        replaceWithSingleRule(new DocumentReference("xwiki", "space", "myPage"), XWIKI_RIGHTS_CLASS,
             new DocumentReference("xwiki", "space", "myPage"));
     }
 
-    private void copyRuleIntoBaseObjects(EntityReference whereToSaveRules, EntityReference rightsClassReference,
+    private void replaceWithSingleRule(EntityReference whereToSaveRules, EntityReference rightsClassReference,
         DocumentReference whereToCheckObjects) throws XWikiException, ComponentLookupException
     {
         // replace a rule and check that it's in the same object & test if it copied all the fields
