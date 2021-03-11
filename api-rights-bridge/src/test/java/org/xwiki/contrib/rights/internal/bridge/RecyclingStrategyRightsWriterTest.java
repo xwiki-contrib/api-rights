@@ -145,6 +145,8 @@ public class RecyclingStrategyRightsWriterTest
 
         rightsWriter.saveRules(Collections.singletonList(ruleToCopy), spaceReference, "recycling");
 
+        // The XWikiDocument was changed in the store, need to retrieve it again.
+        spaceWebPreferencesDoc = oldcore.getSpyXWiki().getDocument(spaceWebPreferencesRef, oldcore.getXWikiContext());
         assertEquals(1, spaceWebPreferencesDoc.getXObjects(XWIKI_GLOBAL_RIGHTS_CLASS).size());
         assertEquals(0, spaceWebPreferencesDoc.getXObjects(XWIKI_GLOBAL_RIGHTS_CLASS).get(0).getNumber());
     }
@@ -182,6 +184,9 @@ public class RecyclingStrategyRightsWriterTest
         }
 
         rightsWriter.saveRules(Arrays.asList(dumbRight2, dumb, dumbRight2, dumbRight2), documentReference, "recycling");
+
+        // The XWikiDocument was changed in the store, need to retrieve it again.
+        document = oldcore.getSpyXWiki().getDocument(documentReference, oldcore.getXWikiContext());
 
         noPersistedObjects = 4;
         assertEquals(noPersistedObjects, document.getXObjects(XWIKI_RIGHTS_CLASS).size());

@@ -118,7 +118,7 @@ public class DefaultRightsWriter extends AbstractRightsWriter
             }
             // get document to perform changes on
             XWikiContext context = getXContext();
-            XWikiDocument doc = getXWiki().getDocument(documentReference, context);
+            XWikiDocument doc = getXWiki().getDocument(documentReference, context).clone();
 
             // write objects according to the chosen strategy
             rulesWriter.persistRulesToObjects(rules, doc, rightsClassReference, context);
