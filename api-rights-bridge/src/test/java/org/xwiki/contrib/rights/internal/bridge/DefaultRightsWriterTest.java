@@ -19,7 +19,6 @@
  */
 package org.xwiki.contrib.rights.internal.bridge;
 
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -67,9 +66,8 @@ import com.xpn.xwiki.test.junit5.mockito.OldcoreTest;
 import com.xpn.xwiki.test.reference.ReferenceComponentList;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.Mockito.doThrow;
 
 /**
  * @version $Id$
@@ -558,9 +556,54 @@ class DefaultRightsWriterTest
                 document.getXObjects(XWIKI_GLOBAL_RIGHTS_CLASS).get(0).getLargeStringValue(USERS_PROPERTY)));
     }
 
+    @Test
+    void testObjectsCleaning() throws XWikiException
+    {
+        // This test is about checking the case when a document saving fails. In this case, the right object should
+        // have no properties set (eg. we don't have a mix between old and new properties).
+        SpaceReference spaceToSetRights = new SpaceReference("xwiki", "MySpace");
+
+        DocumentReference userReference = new DocumentReference("XWikiAdmin", new SpaceReference("XWiki",
+            new WikiReference("subwiki")));
+        DocumentReference userReferenceFromSameWiki = new DocumentReference("SimpleUser", new SpaceReference("Space",
+            new WikiReference("xwiki")));
+        DocumentReference groupReference = new DocumentReference("XWikiAllGroup", new SpaceReference("Space",
+            new WikiReference("anotherWiki")));
+
+        WritableSecurityRule writableSecurityRule =
+            new WritableSecurityRuleImpl(Collections.singletonList(groupReference),
+                Arrays.asList(userReference, userReferenceFromSameWiki), new RightSet(Right.EDIT, Right.VIEW,
+                Right.COMMENT), RuleState.DENY);
+
+        rightsWriter.saveRules(Collections.singletonList(writableSecurityRule), spaceToSetRights);
+
+        DocumentReference spaceWebPref = new DocumentReference(XWIKI_WEB_PREFERENCES, spaceToSetRights);
+        XWikiDocument documentWhereToCheckRules =
+            oldcore.getSpyXWiki().getDocument(spaceWebPref, oldcore.getXWikiContext());
+
+        assertEquals(1, documentWhereToCheckRules.getXObjects(XWIKI_GLOBAL_RIGHTS_CLASS).size());
+        assertObject("anotherWiki:Space.XWikiAllGroup", "subwiki:XWiki.XWikiAdmin,Space.SimpleUser", "view,edit,comment"
+            , 0, documentWhereToCheckRules.getXObjects(XWIKI_GLOBAL_RIGHTS_CLASS).get(0));
+
+        XWikiDocument spaceToSetRightsDocument =
+            oldcore.getSpyXWiki().getDocument(spaceToSetRights, oldcore.getXWikiContext());
+
+        doThrow(XWikiException.class).when(oldcore.getSpyXWiki())
+            .saveDocument(spaceToSetRightsDocument, oldcore.getXWikiContext());
+        try {
+            rightsWriter.saveRules(Collections.singletonList(writableSecurityRule), spaceToSetRights);
+        } catch (XWikiException e) {
+            // Ensure that no properties of the rule were persisted.
+            documentWhereToCheckRules =
+                oldcore.getSpyXWiki().getDocument(spaceWebPref, oldcore.getXWikiContext());
+            assertEquals(1, documentWhereToCheckRules.getXObjects(XWIKI_GLOBAL_RIGHTS_CLASS).size());
+            assertObject("", "", "", 1, documentWhereToCheckRules.getXObjects(XWIKI_GLOBAL_RIGHTS_CLASS).get(0));
+        }
+    }
+
     /**
      * Helper function to get the non null objects.
-     * 
+     *
      * @param classReference
      * @param document
      * @return
@@ -587,5 +630,23 @@ class DefaultRightsWriterTest
         } finally {
             this.oldcore.getXWikiContext().setWikiId(oldWikiId);
         }
+    }
+
+    /**
+     * Helps to assert the state of an object. Since it compares the properties as strings, use only for single values
+     * of the tested metadata, since you cannot rely on the order of serialization.
+     *
+     * @param groups expected groups, as string
+     * @param users expected users, as string
+     * @param rights expected rights, as string
+     * @param allow expected allow as number (1 for allow, 0 for deny)
+     * @param testedObj the object to test previous values on
+     */
+    private void assertObject(String groups, String users, String rights, int allow, BaseObject testedObj)
+    {
+        assertEquals(users, testedObj.getLargeStringValue(XWikiConstants.USERS_FIELD_NAME));
+        assertEquals(groups, testedObj.getLargeStringValue(XWikiConstants.GROUPS_FIELD_NAME));
+        assertEquals(rights, testedObj.getLargeStringValue(XWikiConstants.LEVELS_FIELD_NAME));
+        assertEquals(allow, testedObj.getIntValue(XWikiConstants.ALLOW_FIELD_NAME));
     }
 }
