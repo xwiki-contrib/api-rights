@@ -58,6 +58,8 @@ public class RightsAPIService implements ScriptService
 {
     private static final String ERROR_MESSAGE = "message";
 
+    private static final String DEFAULT_STRATEGY_RULES_OBJECT_WRITER = "recycling";
+
     @Inject
     private Provider<XWikiContext> xcontextProvider;
 
@@ -109,7 +111,7 @@ public class RightsAPIService implements ScriptService
      */
     public boolean saveRules(List<ReadableSecurityRule> rules, EntityReference reference)
     {
-        return saveRules(rules, reference, "recycling");
+        return saveRules(rules, reference, DEFAULT_STRATEGY_RULES_OBJECT_WRITER);
     }
 
     /**
@@ -121,7 +123,7 @@ public class RightsAPIService implements ScriptService
      *     org.xwiki.model.EntityType#WIKI}
      * @param strategyName a strategy for persisting the objects. It needs to be the name of an implementation of
      *     {@link RulesObjectWriter}.
-     * @return
+     * @return whether the save was successful or not.
      */
     public boolean saveRules(List<ReadableSecurityRule> rules, EntityReference reference, String strategyName)
     {
@@ -130,11 +132,11 @@ public class RightsAPIService implements ScriptService
                 if (null != strategyName && !StringUtils.isBlank(strategyName)) {
                     rightsWriter.saveRules(rules, reference, strategyName);
                 } else {
-                    rightsWriter.saveRules(rules, reference, "recycling");
+                    rightsWriter.saveRules(rules, reference, DEFAULT_STRATEGY_RULES_OBJECT_WRITER);
                 }
                 return true;
-            } catch (UnsupportedOperationException | IllegalArgumentException | XWikiException |
-                ComponentLookupException e) {
+            } catch (UnsupportedOperationException | IllegalArgumentException | XWikiException
+                | ComponentLookupException e) {
                 xcontextProvider.get().put(ERROR_MESSAGE, e.toString());
                 logger.error(e.toString());
             }
