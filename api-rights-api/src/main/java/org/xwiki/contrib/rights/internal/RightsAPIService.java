@@ -34,8 +34,12 @@ import org.xwiki.component.manager.ComponentLookupException;
 import org.xwiki.contrib.rights.RightsReader;
 import org.xwiki.contrib.rights.RightsWriter;
 import org.xwiki.contrib.rights.WritableSecurityRule;
+import org.xwiki.model.EntityType;
+import org.xwiki.model.reference.DocumentReference;
 import org.xwiki.model.reference.DocumentReferenceResolver;
 import org.xwiki.model.reference.EntityReference;
+import org.xwiki.model.reference.SpaceReference;
+import org.xwiki.model.reference.WikiReference;
 import org.xwiki.script.service.ScriptService;
 import org.xwiki.security.authorization.AuthorizationManager;
 import org.xwiki.security.authorization.ReadableSecurityRule;
@@ -59,6 +63,12 @@ public class RightsAPIService implements ScriptService
     private static final String ERROR_MESSAGE = "message";
 
     private static final String DEFAULT_STRATEGY_RULES_OBJECT_WRITER = "recycling";
+
+    private static final String XWIKI_SPACE = "XWiki";
+
+    private static final String XWIKI_WEB_PREFERENCES = "WebPreferences";
+
+    private static final String XWIKI_PREFERENCES = "XWikiPreferences";
 
     @Inject
     private Provider<XWikiContext> xcontextProvider;
@@ -122,12 +132,12 @@ public class RightsAPIService implements ScriptService
      *     {@link org.xwiki.model.EntityType#DOCUMENT}, {@link org.xwiki.model.EntityType#SPACE} or {@link
      *     org.xwiki.model.EntityType#WIKI}
      * @param strategyName a strategy for persisting the objects. It needs to be the name of an implementation of
-     *     {@link RulesObjectWriter}.
+     *     RulesObjectWriter. TODO: there should be a link to the interface, but needs to be fixed
      * @return whether the save was successful or not.
      */
     public boolean saveRules(List<ReadableSecurityRule> rules, EntityReference reference, String strategyName)
     {
-        if (authorization.hasAccess(Right.EDIT, xcontextProvider.get().getUserReference(), reference)) {
+        if (userHasAccessInOrderToChangeRights(xcontextProvider.get().getUserReference(), reference)) {
             try {
                 if (null != strategyName && !StringUtils.isBlank(strategyName)) {
                     rightsWriter.saveRules(rules, reference, strategyName);
@@ -196,5 +206,30 @@ public class RightsAPIService implements ScriptService
             writableSecurityRule.setState(RuleState.DENY);
         }
         return writableSecurityRule;
+    }
+
+    private boolean userHasAccessInOrderToChangeRights(DocumentReference user, EntityReference targetEntity)
+    {
+        DocumentReference doc;
+        if (EntityType.DOCUMENT != targetEntity.getType()) {
+            switch (targetEntity.getType()) {
+                case WIKI:
+                    doc = new DocumentReference(XWIKI_PREFERENCES,
+                        new SpaceReference(XWIKI_SPACE, new WikiReference(targetEntity)));
+                    break;
+                case SPACE:
+                    doc = new DocumentReference(XWIKI_WEB_PREFERENCES, new SpaceReference(targetEntity));
+                    break;
+                default:
+                    String couldNotVerifyAccessForGivenReference = "Could not determine if the user has access on"
+                        + " the given documentReference";
+                    xcontextProvider.get().put(ERROR_MESSAGE, couldNotVerifyAccessForGivenReference);
+                    logger.error(couldNotVerifyAccessForGivenReference);
+                    return false;
+            }
+        } else {
+            doc = new DocumentReference(targetEntity);
+        }
+        return authorization.hasAccess(Right.EDIT, user, doc);
     }
 }
