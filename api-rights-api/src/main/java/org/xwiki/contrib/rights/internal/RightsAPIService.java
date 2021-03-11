@@ -27,8 +27,10 @@ import javax.inject.Named;
 import javax.inject.Provider;
 import javax.inject.Singleton;
 
+import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.xwiki.component.annotation.Component;
+import org.xwiki.component.manager.ComponentLookupException;
 import org.xwiki.contrib.rights.RightsReader;
 import org.xwiki.contrib.rights.RightsWriter;
 import org.xwiki.contrib.rights.WritableSecurityRule;
@@ -98,7 +100,7 @@ public class RightsAPIService implements ScriptService
     }
 
     /**
-     * Saves the passed rules. TODO: add API for the named persistence strategy
+     * Saves the passed rules, with the default recycling strategy.
      *
      * @param rules the rules to save.
      * @param reference the reference to save rules on. In order to actually save the rules, the reference must be a
@@ -107,11 +109,32 @@ public class RightsAPIService implements ScriptService
      */
     public boolean saveRules(List<ReadableSecurityRule> rules, EntityReference reference)
     {
+        return saveRules(rules, reference, "recycling");
+    }
+
+    /**
+     * Saves the passed rules, accordingly to the gives <code>strategy</code>.
+     *
+     * @param rules the rules to save
+     * @param reference the reference to save rules on. In order to actually save the rules, the reference must be a
+     *     {@link org.xwiki.model.EntityType#DOCUMENT}, {@link org.xwiki.model.EntityType#SPACE} or {@link
+     *     org.xwiki.model.EntityType#WIKI}
+     * @param strategyName a strategy for persisting the objects. It needs to be the name of an implementation of
+     *     {@link RulesObjectWriter}.
+     * @return
+     */
+    public boolean saveRules(List<ReadableSecurityRule> rules, EntityReference reference, String strategyName)
+    {
         if (authorization.hasAccess(Right.EDIT, xcontextProvider.get().getUserReference(), reference)) {
             try {
-                rightsWriter.saveRules(rules, reference);
+                if (null != strategyName && !StringUtils.isBlank(strategyName)) {
+                    rightsWriter.saveRules(rules, reference, strategyName);
+                } else {
+                    rightsWriter.saveRules(rules, reference, "recycling");
+                }
                 return true;
-            } catch (UnsupportedOperationException | IllegalArgumentException | XWikiException e) {
+            } catch (UnsupportedOperationException | IllegalArgumentException | XWikiException |
+                ComponentLookupException e) {
                 xcontextProvider.get().put(ERROR_MESSAGE, e.toString());
                 logger.error(e.toString());
             }
