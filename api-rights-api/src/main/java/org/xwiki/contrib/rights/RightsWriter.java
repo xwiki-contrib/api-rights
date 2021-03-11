@@ -80,7 +80,7 @@ public interface RightsWriter
      * Saves the passed rules on the given reference. The passed rules replace whatever other rules were already in
      * place on the passed reference, "What you send is what you get". If you need to add to the existing rules of the
      * reference, use the {@link RightsReader} API to read the existing rules, then turn them into writable ones using
-     * {@link RightsWriter#createRules(List)}, add a new rule and then persist them using this function. <br />
+     * {@link RightsWriter#createRules(List)}, add a new rule and then persist them using this function. <br >
      * This function uses a default persistence strategy.
      *
      * @param rules the new rules to set for the passed reference. They will replace whatever existing rules are
