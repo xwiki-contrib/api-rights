@@ -148,7 +148,7 @@ public class RightsAPIService implements ScriptService
             } catch (UnsupportedOperationException | IllegalArgumentException | XWikiException
                 | ComponentLookupException e) {
                 xcontextProvider.get().put(ERROR_MESSAGE, e.toString());
-                logger.error(e.toString());
+                logger.error(e.toString(), e);
             }
         }
         return false;
