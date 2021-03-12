@@ -62,8 +62,6 @@ public class RightsAPIService implements ScriptService
 {
     private static final String ERROR_MESSAGE = "message";
 
-    private static final String DEFAULT_STRATEGY_RULES_OBJECT_WRITER = "recycling";
-
     private static final String XWIKI_SPACE = "XWiki";
 
     private static final String XWIKI_WEB_PREFERENCES = "WebPreferences";
@@ -121,7 +119,7 @@ public class RightsAPIService implements ScriptService
      */
     public boolean saveRules(List<ReadableSecurityRule> rules, EntityReference reference)
     {
-        return saveRules(rules, reference, DEFAULT_STRATEGY_RULES_OBJECT_WRITER);
+        return saveRules(rules, reference, null);
     }
 
     /**
@@ -142,7 +140,7 @@ public class RightsAPIService implements ScriptService
                 if (null != strategyName && !StringUtils.isBlank(strategyName)) {
                     rightsWriter.saveRules(rules, reference, strategyName);
                 } else {
-                    rightsWriter.saveRules(rules, reference, DEFAULT_STRATEGY_RULES_OBJECT_WRITER);
+                    rightsWriter.saveRules(rules, reference);
                 }
                 return true;
             } catch (UnsupportedOperationException | IllegalArgumentException | XWikiException
