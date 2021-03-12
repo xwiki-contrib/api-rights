@@ -66,7 +66,10 @@ public abstract class AbstractRulesObjectWriter implements RulesObjectWriter
     void copyRuleIntoBaseObject(BaseObject right, ReadableSecurityRule rule, XWikiContext context)
     {
         if (null != right) {
-            if (null != rule.getState()) {
+            if (null == rule.getState()) {
+                // By default, the rule is set to allow.
+                right.setIntValue(XWikiConstants.ALLOW_FIELD_NAME, 1);
+            } else {
                 right.setIntValue(XWikiConstants.ALLOW_FIELD_NAME,
                     rule.getState().getValue() == RuleState.DENY.getValue() ? 0 : 1);
             }
