@@ -51,6 +51,7 @@ import org.xwiki.test.annotation.ComponentList;
 import org.xwiki.test.junit5.mockito.InjectMockComponents;
 import org.xwiki.test.junit5.mockito.MockComponent;
 
+import com.xpn.xwiki.XWikiContext;
 import com.xpn.xwiki.XWikiException;
 import com.xpn.xwiki.api.Document;
 import com.xpn.xwiki.doc.XWikiDocument;
@@ -65,9 +66,12 @@ import com.xpn.xwiki.test.junit5.mockito.InjectMockitoOldcore;
 import com.xpn.xwiki.test.junit5.mockito.OldcoreTest;
 import com.xpn.xwiki.test.reference.ReferenceComponentList;
 
+import static org.junit.Assert.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.ArgumentMatchers.any;
 
 /**
  * @version $Id$
@@ -588,17 +592,121 @@ class DefaultRightsWriterTest
         XWikiDocument spaceToSetRightsDocument =
             oldcore.getSpyXWiki().getDocument(spaceToSetRights, oldcore.getXWikiContext());
 
+        // make sure the save fails
+        boolean saveFailed = false;
         doThrow(XWikiException.class).when(oldcore.getSpyXWiki())
             .saveDocument(spaceToSetRightsDocument, oldcore.getXWikiContext());
         try {
             rightsWriter.saveRules(Collections.singletonList(writableSecurityRule), spaceToSetRights);
         } catch (XWikiException e) {
+            saveFailed = true;
             // Ensure that no properties of the rule were persisted.
             documentWhereToCheckRules =
                 oldcore.getSpyXWiki().getDocument(spaceWebPref, oldcore.getXWikiContext());
             assertEquals(1, documentWhereToCheckRules.getXObjects(XWIKI_GLOBAL_RIGHTS_CLASS).size());
             assertObject("", "", "", 1, documentWhereToCheckRules.getXObjects(XWIKI_GLOBAL_RIGHTS_CLASS).get(0));
         }
+        assertTrue(saveFailed);
+    }
+
+    /**
+     * Test that saveRules() does not alter the XWikiDocument from cache: <br>
+     * Test that if the save of the document fails (for any reason), the cached document is not altered during the
+     * execution of the save function. <br>
+     * This test is not fully accurate as the cache simulation in the mocked oldcore is not perfectly equivalent to the
+     * actual functioning of the cache in oldcore -> see notes in the test.
+     *
+     * @throws XWikiException in case anything goes wrong
+     */
+    @Test
+    void testOriginalDocumentNotAlteredWhenSaveFails() throws XWikiException
+    {
+        // This test is about checking the case when a document saving fails. In this case, the right object should
+        // have no properties set (eg. we don't have a mix between old and new properties).
+        SpaceReference spaceToSetRights = new SpaceReference("xwiki", "MySpace");
+        DocumentReference spaceWebPref = new DocumentReference(XWIKI_WEB_PREFERENCES, spaceToSetRights);
+
+        XWikiDocument docBeforeSave = oldcore.getSpyXWiki().getDocument(spaceWebPref, oldcore.getXWikiContext());
+
+        // save the document first, to make sure it's an existing document, so that all subsequent getDocument() on this
+        // document simulate a little the cache mechanism.
+        oldcore.getSpyXWiki().saveDocument(docBeforeSave, oldcore.getXWikiContext());
+
+        XWikiDocument docBeforeSavingRules = oldcore.getSpyXWiki().getDocument(spaceWebPref, oldcore.getXWikiContext());
+
+        // there are no objects in the document before the save
+        assertEquals(0, docBeforeSavingRules.getXObjects(XWIKI_GLOBAL_RIGHTS_CLASS).size());
+
+        // make sure the save fails
+        boolean saveFailed = false;
+        doThrow(XWikiException.class).when(oldcore.getSpyXWiki()).saveDocument(any(XWikiDocument.class),
+            any(XWikiContext.class));
+        try {
+            WritableSecurityRule writableSecurityRule = new WritableSecurityRuleImpl(
+                Collections.singletonList(new DocumentReference("xwiki", "XWiki", "XWikiAdminGroup")),
+                Collections.singletonList(new DocumentReference("xwiki", "XWiki", "Admin")), new RightSet(Right.VIEW),
+                RuleState.ALLOW);
+            rightsWriter.saveRules(Collections.singletonList(writableSecurityRule), spaceToSetRights);
+        } catch (XWikiException e) {
+            saveFailed = true;
+        }
+
+        assertTrue(saveFailed);
+
+        // there are still no objects in the document after the save
+        assertEquals(0, docBeforeSavingRules.getXObjects(XWIKI_GLOBAL_RIGHTS_CLASS).size());
+
+        // even if re-fetching the document from the xwiki, there are still no objects in it
+        // This part of the test is not fully relevant because the cache simulation in the mocked old core store is not
+        // complete (does not cleanup documents from cache upon save, we probably need to implement a proper mock
+        // framework)
+        XWikiDocument documentAfterSavingRules =
+            oldcore.getSpyXWiki().getDocument(spaceWebPref, oldcore.getXWikiContext());
+        assertEquals(0, documentAfterSavingRules.getXObjects(XWIKI_GLOBAL_RIGHTS_CLASS).size());
+    }
+
+    /**
+     * Test that saveRules() does not alter the XWikiDocument from cache: <br>
+     * Test that if an xwiki document is fetched before the save of rules, the save of rules will not alter this
+     * previously fetched document but work on a clone and in order to get the updated document we need to fetch the
+     * document again from the store. <br>
+     * This test is not fully accurate as the cache simulation in the mocked oldcore is not perfectly equivalent to the
+     * actual functioning of the cache in oldcore -> see notes in the test.
+     *
+     * @throws XWikiException in case anything goes wrong
+     */
+    @Test
+    void testPreviouslyFetchedDocumentNotAlteredWhenSaveWorks() throws XWikiException
+    {
+        // This test is about checking the case when a document saving fails. In this case, the right object should
+        // have no properties set (eg. we don't have a mix between old and new properties).
+        SpaceReference spaceToSetRights = new SpaceReference("xwiki", "MySpace");
+        DocumentReference spaceWebPref = new DocumentReference(XWIKI_WEB_PREFERENCES, spaceToSetRights);
+
+        XWikiDocument docBeforeSave = oldcore.getSpyXWiki().getDocument(spaceWebPref, oldcore.getXWikiContext());
+
+        // save the document first, to make sure it's an existing document, so that all subsequent getDocument() on this
+        // document simulate a little the cache mechanism.
+        oldcore.getSpyXWiki().saveDocument(docBeforeSave, oldcore.getXWikiContext());
+
+        XWikiDocument docBeforeSavingRules = oldcore.getSpyXWiki().getDocument(spaceWebPref, oldcore.getXWikiContext());
+
+        // there are no objects in the document before the save
+        assertEquals(0, docBeforeSavingRules.getXObjects(XWIKI_GLOBAL_RIGHTS_CLASS).size());
+
+        WritableSecurityRule writableSecurityRule = new WritableSecurityRuleImpl(
+            Collections.singletonList(new DocumentReference("xwiki", "XWiki", "XWikiAdminGroup")),
+            Collections.singletonList(new DocumentReference("xwiki", "XWiki", "Admin")), new RightSet(Right.VIEW),
+            RuleState.ALLOW);
+        rightsWriter.saveRules(Collections.singletonList(writableSecurityRule), spaceToSetRights);
+
+        // there are still no objects in the document that was fetched before the save
+        assertEquals(0, docBeforeSavingRules.getXObjects(XWIKI_GLOBAL_RIGHTS_CLASS).size());
+
+        // there are objects on the document after re-fetching it from the "store"
+        XWikiDocument documentAfterSavingRules =
+            oldcore.getSpyXWiki().getDocument(spaceWebPref, oldcore.getXWikiContext());
+        assertEquals(1, getNonNullObjects(XWIKI_GLOBAL_RIGHTS_CLASS, documentAfterSavingRules).size());
     }
 
     /**
