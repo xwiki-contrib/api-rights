@@ -22,6 +22,8 @@ package org.xwiki.contrib.rights.internal.bridge;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
+import java.util.stream.Collectors;
 
 import javax.inject.Named;
 
@@ -147,8 +149,9 @@ public class RecyclingStrategyRightsWriterTest
 
         // The XWikiDocument was changed in the store, need to retrieve it again.
         spaceWebPreferencesDoc = oldcore.getSpyXWiki().getDocument(spaceWebPreferencesRef, oldcore.getXWikiContext());
-        assertEquals(1, spaceWebPreferencesDoc.getXObjects(XWIKI_GLOBAL_RIGHTS_CLASS).size());
-        assertEquals(0, spaceWebPreferencesDoc.getXObjects(XWIKI_GLOBAL_RIGHTS_CLASS).get(0).getNumber());
+        // From the entire list of objects, we're interested only in ones that are not null.
+        assertEquals(1, getNonNullObjects(XWIKI_GLOBAL_RIGHTS_CLASS, spaceWebPreferencesDoc).size());
+        assertEquals(0, getNonNullObjects(XWIKI_GLOBAL_RIGHTS_CLASS, spaceWebPreferencesDoc).get(0).getNumber());
     }
 
     @Test
@@ -495,5 +498,17 @@ public class RecyclingStrategyRightsWriterTest
         assertEquals(groups, testedObj.getLargeStringValue(XWikiConstants.GROUPS_FIELD_NAME));
         assertEquals(rights, testedObj.getLargeStringValue(XWikiConstants.LEVELS_FIELD_NAME));
         assertEquals(allow, testedObj.getIntValue(XWikiConstants.ALLOW_FIELD_NAME));
+    }
+
+    /**
+     * Helper function to get the non null objects.
+     *
+     * @param classReference
+     * @param document
+     * @return
+     */
+    private List<BaseObject> getNonNullObjects(EntityReference classReference, XWikiDocument document)
+    {
+        return document.getXObjects(classReference).stream().filter(Objects::nonNull).collect(Collectors.toList());
     }
 }
