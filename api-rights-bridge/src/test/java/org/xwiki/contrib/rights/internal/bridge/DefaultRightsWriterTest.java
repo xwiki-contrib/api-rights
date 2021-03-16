@@ -78,12 +78,8 @@ import static org.mockito.Mockito.doThrow;
 @ReferenceComponentList
 @ComponentList({XWikiGlobalRightsDocumentInitializer.class, XWikiRightsDocumentInitializer.class,
     IncrementingObjectNumbersRulesWriter.class, RecyclingObjectsRulesWriter.class})
-class DefaultRightsWriterTest
+class DefaultRightsWriterTest extends AbstractRightsWriterTest
 {
-    private static final String XWIKI_SPACE = "XWiki";
-
-    private static final String XWIKI_WEB_PREFERENCES = "WebPreferences";
-
     private static final String XWIKI_RIGHTS_CLASS_DOC_NAME = "XWiki.XWikiRights";
 
     private static final String XWIKI_GLOBAL_RIGHTS_CLASS_DOC_NAME = "XWiki.XWikiGlobalRights";
@@ -95,12 +91,6 @@ class DefaultRightsWriterTest
     private static final String LEVELS_PROPERTY = "levels";
 
     private static final String ALLOW_PROPERTY = "allow";
-
-    private static final EntityReference XWIKI_RIGHTS_CLASS =
-        new EntityReference("XWikiRights", EntityType.DOCUMENT, new EntityReference(XWIKI_SPACE, EntityType.SPACE));
-
-    private static final EntityReference XWIKI_GLOBAL_RIGHTS_CLASS = new EntityReference("XWikiGlobalRights",
-        EntityType.DOCUMENT, new EntityReference(XWIKI_SPACE, EntityType.SPACE));
 
     /* Mocked for the mockito old core to not fail when trying to initialize the documents */
     @MockComponent
@@ -453,7 +443,7 @@ class DefaultRightsWriterTest
     void testAddRightsGroupOnTheSameWiki() throws XWikiException
     {
         // initialize mandatory classes on the subwiki to test things on
-        initializeMandatoryDocsOnWiki("subwiki");
+        initializeMandatoryDocsOnWiki(this.oldcore, "subwiki");
 
         DocumentReference documentReference = new DocumentReference("subwiki", "S", "P");
         // prepare rules to put on the document
@@ -478,7 +468,7 @@ class DefaultRightsWriterTest
     void testAddRightsGroupOnDifferentWiki() throws XWikiException
     {
         // initialize mandatory classes on the subwiki to test things on
-        initializeMandatoryDocsOnWiki("subwiki");
+        initializeMandatoryDocsOnWiki(this.oldcore, "subwiki");
 
         DocumentReference documentReference = new DocumentReference("subwiki", "S", "P");
         // prepare rules to put on the document
@@ -705,54 +695,5 @@ class DefaultRightsWriterTest
         XWikiDocument documentAfterSavingRules =
             oldcore.getSpyXWiki().getDocument(spaceWebPref, oldcore.getXWikiContext());
         assertEquals(1, getNonNullObjects(XWIKI_GLOBAL_RIGHTS_CLASS, documentAfterSavingRules).size());
-    }
-
-    /**
-     * Helper function to get the non null objects.
-     *
-     * @param classReference
-     * @param document
-     * @return
-     */
-    private List<BaseObject> getNonNullObjects(EntityReference classReference, XWikiDocument document)
-    {
-        return document.getXObjects(classReference).stream().filter(k -> k != null).collect(Collectors.toList());
-    }
-
-    /**
-     * Helper function to setup mandatory classes on a different subwiki than the main wiki.
-     *
-     * @param wikiname the wiki name to initialize mandatory classes on
-     */
-    private void initializeMandatoryDocsOnWiki(String wikiname)
-    {
-        String oldWikiId = this.oldcore.getXWikiContext().getWikiId();
-        try {
-            this.oldcore.getXWikiContext().setWikiId(wikiname);
-            this.oldcore.getSpyXWiki().initializeMandatoryDocuments(this.oldcore.getXWikiContext());
-        } catch (Exception e) {
-            // Dunno what else to do, but definitely I should do something smarter
-            e.printStackTrace();
-        } finally {
-            this.oldcore.getXWikiContext().setWikiId(oldWikiId);
-        }
-    }
-
-    /**
-     * Helps to assert the state of an object. Since it compares the properties as strings, use only for single values
-     * of the tested metadata, since you cannot rely on the order of serialization.
-     *
-     * @param groups expected groups, as string
-     * @param users expected users, as string
-     * @param rights expected rights, as string
-     * @param allow expected allow as number (1 for allow, 0 for deny)
-     * @param testedObj the object to test previous values on
-     */
-    private void assertObject(String groups, String users, String rights, int allow, BaseObject testedObj)
-    {
-        assertEquals(users, testedObj.getLargeStringValue(XWikiConstants.USERS_FIELD_NAME));
-        assertEquals(groups, testedObj.getLargeStringValue(XWikiConstants.GROUPS_FIELD_NAME));
-        assertEquals(rights, testedObj.getLargeStringValue(XWikiConstants.LEVELS_FIELD_NAME));
-        assertEquals(allow, testedObj.getIntValue(XWikiConstants.ALLOW_FIELD_NAME));
     }
 }
