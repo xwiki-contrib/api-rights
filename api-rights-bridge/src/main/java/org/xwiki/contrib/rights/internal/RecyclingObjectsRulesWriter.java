@@ -73,9 +73,7 @@ public class RecyclingObjectsRulesWriter extends AbstractRulesObjectWriter
             for (int i = rules.size(); i < storedObjects.size(); ++i) {
                 objectsToRemove.add(storedObjects.get(i));
             }
-            for (BaseObject object : objectsToRemove) {
-                document.removeXObject(object);
-            }
+            objectsToRemove.forEach(document::removeXObject);
         }
     }
 
