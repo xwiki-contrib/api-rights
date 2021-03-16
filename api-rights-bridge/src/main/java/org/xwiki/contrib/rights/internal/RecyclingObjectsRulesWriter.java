@@ -19,8 +19,8 @@
  */
 package org.xwiki.contrib.rights.internal;
 
-import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import javax.inject.Named;
 import javax.inject.Singleton;
@@ -55,26 +55,30 @@ public class RecyclingObjectsRulesWriter extends AbstractRulesObjectWriter
     {
         // TODO: the parameter type should be DocumentReference
         List<BaseObject> storedObjects = document.getXObjects(classReference);
-        if (rules.size() > storedObjects.size()) {
-            for (int i = 0; i < storedObjects.size(); ++i) {
-                copyRuleIntoBaseObject(storedObjects.get(i), rules.get(i), context);
+
+        // collect all non null BaseObjects that can be recycled so that we recycle them
+        List<BaseObject> recyclableObjects = storedObjects.stream().filter(k -> k != null).collect(Collectors.toList());
+
+        if (rules.size() > recyclableObjects.size()) {
+            // more rules than recyclable objects -> recycle the objects and then create new ones until all rules are
+            // persisted
+            for (int i = 0; i < recyclableObjects.size(); ++i) {
+                copyRuleIntoBaseObject(recyclableObjects.get(i), rules.get(i), context);
             }
-            for (int i = storedObjects.size(); i < rules.size(); ++i) {
+            for (int i = recyclableObjects.size(); i < rules.size(); ++i) {
                 // Create new objects in the document.
                 addNewRightObjectToDocument(rules.get(i), document, classReference, context);
             }
         } else {
+            // less or same number of rules to save than recyclable objects: fill the recyclable objects and remove the
+            // rest of recyclableObjects
             for (int i = 0; i < rules.size(); ++i) {
-                copyRuleIntoBaseObject(storedObjects.get(i), rules.get(i), context);
+                copyRuleIntoBaseObject(recyclableObjects.get(i), rules.get(i), context);
             }
-            List<BaseObject> objectsToRemove = new ArrayList<>();
 
-            // It could be done in a single step, but we would need a copy of storedObjects.
-            for (int i = rules.size(); i < storedObjects.size(); ++i) {
-                objectsToRemove.add(storedObjects.get(i));
+            for (int i = rules.size(); i < recyclableObjects.size(); ++i) {
+                document.removeXObject(recyclableObjects.get(i));
             }
-            objectsToRemove.forEach(document::removeXObject);
         }
     }
-
 }
