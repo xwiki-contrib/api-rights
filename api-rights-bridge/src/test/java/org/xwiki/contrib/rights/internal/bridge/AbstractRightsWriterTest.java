@@ -98,4 +98,12 @@ public class AbstractRightsWriterTest
         assertEquals(allow, testedObj.getIntValue(XWikiConstants.ALLOW_FIELD_NAME));
     }
 
+    boolean matchesRule(String groups, String users, String rights, int allow, BaseObject testedObj)
+    {
+        return groups.equals(testedObj.getLargeStringValue(XWikiConstants.GROUPS_FIELD_NAME))
+            && users.equals(testedObj.getLargeStringValue(XWikiConstants.USERS_FIELD_NAME))
+            && rights.equals(testedObj.getLargeStringValue(XWikiConstants.LEVELS_FIELD_NAME))
+            && allow == testedObj.getIntValue(XWikiConstants.ALLOW_FIELD_NAME);
+    }
+
 }

@@ -22,8 +22,6 @@ package org.xwiki.contrib.rights.internal.bridge;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
-import java.util.Objects;
-import java.util.stream.Collectors;
 
 import javax.inject.Named;
 
@@ -37,7 +35,6 @@ import org.xwiki.contrib.rights.internal.RecyclingObjectsRulesWriter;
 import org.xwiki.contrib.rights.internal.WritableSecurityRuleImpl;
 import org.xwiki.job.event.status.JobProgressManager;
 import org.xwiki.localization.ContextualLocalizationManager;
-import org.xwiki.model.EntityType;
 import org.xwiki.model.reference.DocumentReference;
 import org.xwiki.model.reference.EntityReference;
 import org.xwiki.model.reference.SpaceReference;
@@ -66,6 +63,8 @@ import com.xpn.xwiki.test.reference.ReferenceComponentList;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * @version $Id$
@@ -202,6 +201,34 @@ public class RecyclingStrategyRightsWriterTest extends AbstractRightsWriterTest
             new DocumentReference("xwiki", "space", "myPage"));
     }
 
+    @Test
+    void testIgnoreNullObjectOnRecyclingOnPage() throws XWikiException, ComponentLookupException
+    {
+        ignoreNullObjectOnRecycling(new DocumentReference("xwiki", "space", "myPage"), XWIKI_RIGHTS_CLASS,
+            new DocumentReference("xwiki", "space", "myPage"));
+    }
+
+    @Test
+    void testIgnoreNullObjectOnRecyclingOnSpace() throws XWikiException, ComponentLookupException
+    {
+        ignoreNullObjectOnRecycling(new SpaceReference("xwiki", "Space", "MySpace"), XWIKI_GLOBAL_RIGHTS_CLASS,
+            new DocumentReference("xwiki", Arrays.asList("Space", "MySpace"), XWIKI_WEB_PREFERENCES));
+    }
+
+    @Test
+    void testCleanupNullObjectsOnRecyclingOnPage() throws XWikiException, ComponentLookupException
+    {
+        cleanupNullObjectsOnRecycling(new DocumentReference("xwiki", "space", "myPage"), XWIKI_RIGHTS_CLASS,
+            new DocumentReference("xwiki", "space", "myPage"));
+    }
+
+    @Test
+    void testCleanupNullObjectsOnRecyclingOnSpace() throws XWikiException, ComponentLookupException
+    {
+        cleanupNullObjectsOnRecycling(new SpaceReference("xwiki", "Space", "MySpace"), XWIKI_GLOBAL_RIGHTS_CLASS,
+            new DocumentReference("xwiki", Arrays.asList("Space", "MySpace"), XWIKI_WEB_PREFERENCES));
+    }
+
     private void replaceWithSingleRule(EntityReference whereToSaveRules, EntityReference rightsClassReference,
         DocumentReference whereToCheckObjects) throws XWikiException, ComponentLookupException
     {
@@ -244,6 +271,120 @@ public class RecyclingStrategyRightsWriterTest extends AbstractRightsWriterTest
         assertEquals(Collections.singletonList("view"),
             LevelsClass.getListFromString(right.getLargeStringValue("levels")));
         assertEquals(1, right.getIntValue(XWikiConstants.ALLOW_FIELD_NAME));
+    }
+
+    /**
+     * Tests that if a null object is in the objects array, it's correctly ignored upon recycling. Will be used to test
+     * the case on page and space.
+     *
+     * @param whereToSaveRules entity to save rules on (page or space)
+     * @param rightsClassReference the class of the rules (depending on whether it's space or page)
+     * @param whereToCheckObjects the document where rules are saved (depending on whether it's space or page)
+     * @throws XWikiException in case anything goes wrong
+     * @throws ComponentLookupException in case anything goes wrong
+     */
+    private void ignoreNullObjectOnRecycling(EntityReference whereToSaveRules, EntityReference rightsClassReference,
+        DocumentReference whereToCheckObjects) throws XWikiException, ComponentLookupException
+    {
+        // 1. save two rules
+        WritableSecurityRule ruleOne = new WritableSecurityRuleImpl(
+            Collections.singletonList(new DocumentReference("xwiki", "XWiki", "XWikiAdminGroup")),
+            Collections.emptyList(), new RightSet(Right.VIEW), RuleState.ALLOW);
+        WritableSecurityRule ruleTwo = new WritableSecurityRuleImpl(Collections.emptyList(),
+            Collections.singletonList(new DocumentReference("xwiki", "XWiki", "Admin")), new RightSet(Right.EDIT),
+            RuleState.ALLOW);
+        rightsWriter.saveRules(Arrays.asList(ruleOne, ruleTwo), whereToSaveRules, "recycling");
+
+        // check that 2 objects were created, and that they're not null
+        XWikiDocument checkedDoc = oldcore.getSpyXWiki().getDocument(whereToCheckObjects, oldcore.getXWikiContext());
+        assertEquals(2, checkedDoc.getXObjects(rightsClassReference).size());
+        assertEquals(2, getNonNullObjects(rightsClassReference, checkedDoc).size());
+
+        // 2. alter the document by other means and remove its first object
+        XWikiDocument docToAlter = checkedDoc.clone();
+        BaseObject firstObject = docToAlter.getXObjects(rightsClassReference).get(0);
+        docToAlter.removeXObject(firstObject);
+        this.oldcore.getSpyXWiki().saveDocument(docToAlter, this.oldcore.getXWikiContext());
+        // check that indeed the first object is null now
+        checkedDoc = oldcore.getSpyXWiki().getDocument(whereToCheckObjects, oldcore.getXWikiContext());
+        assertEquals(2, checkedDoc.getXObjects(rightsClassReference).size());
+        assertNull(checkedDoc.getXObjects(rightsClassReference).get(0));
+
+        // 3. update the rules with the 2 rules (but in reverse order)
+        rightsWriter.saveRules(Arrays.asList(ruleTwo, ruleOne), whereToSaveRules, "recycling");
+        // and check that it doesn't fail and rules are saved correctly
+        checkedDoc = oldcore.getSpyXWiki().getDocument(whereToCheckObjects, oldcore.getXWikiContext());
+        assertEquals(2, getNonNullObjects(rightsClassReference, checkedDoc).size());
+
+        // check that the 2 rules are matched by the objects in this document, regardless of the order
+        boolean matchesRuleOne = false;
+        boolean matchesRuleTwo = false;
+        for (BaseObject rightObj : checkedDoc.getXObjects(rightsClassReference)) {
+            if (rightObj != null) {
+                matchesRuleOne = matchesRuleOne || matchesRule("XWiki.XWikiAdminGroup", "", "view", 1, rightObj);
+                matchesRuleTwo = matchesRuleTwo || matchesRule("", "XWiki.Admin", "edit", 1, rightObj);
+            }
+        }
+        assertTrue(matchesRuleOne);
+        assertTrue(matchesRuleTwo);
+    }
+
+    /**
+     * Tests that if a null object is in the objects array, it's correctly "removed" upon recycling. Actually, it tests
+     * that if there is a non-null object after the null one it also gets cleaned up properly.
+     *
+     * @param whereToSaveRules entity to save rules on (page or space)
+     * @param rightsClassReference the class of the rules (depending on whether it's space or page)
+     * @param whereToCheckObjects the document where rules are saved (depending on whether it's space or page)
+     * @throws XWikiException in case anything goes wrong
+     * @throws ComponentLookupException in case anything goes wrong
+     */
+    private void cleanupNullObjectsOnRecycling(EntityReference whereToSaveRules, EntityReference rightsClassReference,
+        DocumentReference whereToCheckObjects) throws XWikiException, ComponentLookupException
+    {
+        // 1. save four rules
+        WritableSecurityRule ruleOne = new WritableSecurityRuleImpl(Collections.emptyList(),
+            Collections.singletonList(new DocumentReference("xwiki", "XWiki", "One")), new RightSet(Right.VIEW),
+            RuleState.ALLOW);
+        WritableSecurityRule ruleTwo = new WritableSecurityRuleImpl(Collections.emptyList(),
+            Collections.singletonList(new DocumentReference("xwiki", "XWiki", "Two")), new RightSet(Right.VIEW),
+            RuleState.ALLOW);
+        WritableSecurityRule ruleThree = new WritableSecurityRuleImpl(Collections.emptyList(),
+            Collections.singletonList(new DocumentReference("xwiki", "XWiki", "Three")), new RightSet(Right.VIEW),
+            RuleState.ALLOW);
+        WritableSecurityRule ruleFour = new WritableSecurityRuleImpl(Collections.emptyList(),
+            Collections.singletonList(new DocumentReference("xwiki", "XWiki", "Four")), new RightSet(Right.VIEW),
+            RuleState.ALLOW);
+        rightsWriter.saveRules(Arrays.asList(ruleOne, ruleTwo, ruleThree, ruleFour), whereToSaveRules, "recycling");
+
+        // check that 4 objects were created, and that they're not null
+        XWikiDocument checkedDoc = oldcore.getSpyXWiki().getDocument(whereToCheckObjects, oldcore.getXWikiContext());
+        assertEquals(4, checkedDoc.getXObjects(rightsClassReference).size());
+        assertEquals(4, getNonNullObjects(rightsClassReference, checkedDoc).size());
+
+        // 2. alter the document by other means and remove its third object
+        XWikiDocument docToAlter = checkedDoc.clone();
+        BaseObject thirdObject = docToAlter.getXObjects(rightsClassReference).get(2);
+        docToAlter.removeXObject(thirdObject);
+        this.oldcore.getSpyXWiki().saveDocument(docToAlter, this.oldcore.getXWikiContext());
+        // check that indeed the third object is null now
+        checkedDoc = oldcore.getSpyXWiki().getDocument(whereToCheckObjects, oldcore.getXWikiContext());
+        assertEquals(4, checkedDoc.getXObjects(rightsClassReference).size());
+        assertEquals(3, getNonNullObjects(rightsClassReference, checkedDoc).size());
+        assertNull(checkedDoc.getXObjects(rightsClassReference).get(2));
+
+        // 3. update the rules with one new rule
+        rightsWriter
+            .saveRules(
+                Arrays.asList(new WritableSecurityRuleImpl(
+                    Collections.singletonList(new DocumentReference("xwiki", "XWiki", "XWikiAdminGroup")),
+                    Collections.emptyList(), new RightSet(Right.EDIT), RuleState.ALLOW)),
+                whereToSaveRules, "recycling");
+        // and check that it doesn't fail and the rule is saved correctly
+        checkedDoc = oldcore.getSpyXWiki().getDocument(whereToCheckObjects, oldcore.getXWikiContext());
+        assertEquals(1, getNonNullObjects(rightsClassReference, checkedDoc).size());
+        BaseObject rightObj = checkedDoc.getXObject(rightsClassReference);
+        assertObject("XWiki.XWikiAdminGroup", "", "edit", 1, rightObj);
     }
 
     /**
