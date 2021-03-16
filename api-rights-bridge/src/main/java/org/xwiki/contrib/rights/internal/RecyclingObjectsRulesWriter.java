@@ -19,6 +19,7 @@
  */
 package org.xwiki.contrib.rights.internal;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import javax.inject.Named;
@@ -66,8 +67,14 @@ public class RecyclingObjectsRulesWriter extends AbstractRulesObjectWriter
             for (int i = 0; i < rules.size(); ++i) {
                 copyRuleIntoBaseObject(storedObjects.get(i), rules.get(i), context);
             }
-            while (rules.size() != storedObjects.size()) {
-                storedObjects.remove(storedObjects.size() - 1);
+            List<BaseObject> objectsToRemove = new ArrayList<>();
+
+            // It could be done in a single step, but we would need a copy of storedObjects.
+            for (int i = rules.size(); i < storedObjects.size(); ++i) {
+                objectsToRemove.add(storedObjects.get(i));
+            }
+            for (BaseObject object : objectsToRemove) {
+                document.removeXObject(object);
             }
         }
     }
