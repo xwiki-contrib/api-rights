@@ -2,7 +2,7 @@
 
 Thhis extension is an attempt at solving https://jira.xwiki.org/browse/XWIKI-13466 .
 
-* Project Lead:
+* Project Lead: [Anca Luca](https://github.com/lucaa)
 * [Documentation & Download]
 * [Issue Tracker](https://jira.xwiki.org/projects/RIGHTSAPI)
 * Minimal XWiki version supported: XWiki 12.10-SNAPSHOT
