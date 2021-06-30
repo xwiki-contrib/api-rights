@@ -1,2 +1,3 @@
 org.xwiki.contrib.rights.internal.DefaultRightsReader
+org.xwiki.contrib.rights.internal.DefaultSecurityRuleAbacus
 org.xwiki.contrib.rights.internal.RightsAPIService

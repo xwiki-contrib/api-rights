@@ -33,7 +33,6 @@ import org.xwiki.contrib.rights.SecurityRuleAbacus;
 import org.xwiki.model.reference.DocumentReference;
 import org.xwiki.model.reference.EntityReferenceSerializer;
 import org.xwiki.security.authorization.ReadableSecurityRule;
-import org.xwiki.security.authorization.Right;
 import org.xwiki.security.authorization.RightSet;
 
 /**
