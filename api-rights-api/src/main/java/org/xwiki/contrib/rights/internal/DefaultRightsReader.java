@@ -29,12 +29,17 @@ import javax.inject.Singleton;
 
 import org.xwiki.component.annotation.Component;
 import org.xwiki.contrib.rights.RightsReader;
+import org.xwiki.contrib.rights.WritableSecurityRule;
+import org.xwiki.model.EntityType;
 import org.xwiki.model.reference.EntityReference;
+import org.xwiki.model.reference.WikiReference;
 import org.xwiki.security.SecurityReference;
 import org.xwiki.security.SecurityReferenceFactory;
 import org.xwiki.security.authorization.AuthorizationException;
 import org.xwiki.security.authorization.ReadableSecurityRule;
+import org.xwiki.security.authorization.RightSet;
 import org.xwiki.security.authorization.SecurityEntryReader;
+import org.xwiki.security.internal.XWikiBridge;
 
 /**
  * @version $Id$
@@ -49,6 +54,9 @@ public class DefaultRightsReader implements RightsReader
 
     @Inject
     private SecurityReferenceFactory securityReferenceFactory;
+
+    @Inject
+    private XWikiBridge xwikiBridge;
 
     /**
      * {@inheritDoc}
@@ -102,9 +110,51 @@ public class DefaultRightsReader implements RightsReader
      * @see org.xwiki.contrib.rights.RightsReader#getActualRules(org.xwiki.model.reference.EntityReference)
      */
     @Override
-    public List<ReadableSecurityRule> getActualRules(EntityReference ref)
+    public List<ReadableSecurityRule> getActualRules(EntityReference entityReference)
     {
-        // TODO Auto-generated method stub
-        return null;
+        // Create a set containing rights that were explicitly encountered going up the parent tree
+        // It will be updated based on what is found when looking at parent pages
+        RightSet encounteredExplicitRights = new RightSet();
+        // The list of all the actual (current + inherited) rules of the page
+        List<ReadableSecurityRule> actualRules = new ArrayList<>();
+
+        // Go up the parent tree to get actual rules
+        EntityReference entityReferenceToGetRules = entityReference;
+
+        do {
+            List<ReadableSecurityRule> inheritedPageRules = this.getRules(entityReferenceToGetRules, false);
+            // We need to treat every groups and users on the page before flagging the rights as inherited
+            // So we keep track of which rights are explicitly set on this parent page to remove them afterwards
+            RightSet toBeAddedExplicitRights = new RightSet();
+            // Inspect rules right by right to not miss any explicit right
+            inheritedPageRules.forEach(rule -> {
+                rule.getRights().forEach(right -> {
+                    // If the right was already set explicitly down the document tree, skip
+                    if (encounteredExplicitRights.contains(right)) {
+                        return;
+                    }
+                    // Else, this is an actual right for the current page
+                    WritableSecurityRule toBeAddedSecurityRule = new WritableSecurityRuleImpl(rule);
+                    toBeAddedSecurityRule.setRights(new RightSet(right));
+                    actualRules.add(toBeAddedSecurityRule);
+                    toBeAddedExplicitRights.add(right);
+                });
+            });
+
+            // Add every rights we explicitly encountered on the page
+            encounteredExplicitRights.addAll(toBeAddedExplicitRights);
+            // Go to the parent page
+            // Also goes up the main wiki if subwiki
+            if (entityReferenceToGetRules.getType() == EntityType.WIKI) {
+                WikiReference mainWiki = xwikiBridge.getMainWikiReference();
+                entityReferenceToGetRules = entityReferenceToGetRules != mainWiki ? mainWiki : null;
+            } else {
+                entityReferenceToGetRules = entityReferenceToGetRules.getParent();
+            }
+        } while (entityReferenceToGetRules != null);
+
+
+
+        return actualRules;
     }
 }
