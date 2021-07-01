@@ -19,39 +19,83 @@
  */
 package org.xwiki.contrib.rights.internal;
 
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 
+import javax.inject.Inject;
+import javax.inject.Named;
+
 import org.junit.jupiter.api.Test;
 import org.xwiki.model.reference.DocumentReference;
+import org.xwiki.model.reference.EntityReference;
 import org.xwiki.model.reference.SpaceReference;
 import org.xwiki.model.reference.WikiReference;
+import org.xwiki.security.DefaultSecurityReferenceFactory;
+import org.xwiki.security.SecurityReference;
+import org.xwiki.security.SecurityReferenceFactory;
+import org.xwiki.security.authorization.AuthorizationException;
 import org.xwiki.security.authorization.ReadableSecurityRule;
 import org.xwiki.security.authorization.Right;
 import org.xwiki.security.authorization.RightSet;
 import org.xwiki.security.authorization.RuleState;
-import org.xwiki.security.internal.XWikiBridge;
+import org.xwiki.security.authorization.SecurityEntryReader;
+import org.xwiki.security.authorization.SecurityRule;
+import org.xwiki.security.internal.DefaultXWikiBridge;
+import org.xwiki.test.annotation.ComponentList;
 import org.xwiki.test.junit5.mockito.ComponentTest;
 import org.xwiki.test.junit5.mockito.InjectMockComponents;
 import org.xwiki.test.junit5.mockito.MockComponent;
 
+import com.xpn.xwiki.test.junit5.mockito.OldcoreTest;
+import com.xpn.xwiki.test.reference.ReferenceComponentList;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.mockito.Mockito.doReturn;
+import static org.junit.jupiter.api.Assertions.fail;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 
 /**
  * @version $Id$
  */
 @ComponentTest
-@DefaultRightsTestComponentList
+@ComponentList({
+    DefaultXWikiBridge.class,
+    DefaultSecurityReferenceFactory.class,
+})
+@ReferenceComponentList
+@OldcoreTest
 public class DefaultRightsReaderTest extends AbstractRightsTest
 {
     @InjectMockComponents
     private DefaultRightsReader rightsReader;
 
+    @InjectMockComponents
+    private DefaultSecurityRuleAbacus securityRuleAbacus;
+
     @MockComponent
-    private XWikiBridge xwikiBridge;
+    @Named("api-rights")
+    private SecurityEntryReader securityEntryReader;
+
+    @InjectMockComponents
+    private DefaultSecurityReferenceFactory securityReferenceFactory;
+
+
+    private void mockEntityReferenceRules(EntityReference entityReference, Collection<ReadableSecurityRule> rules)
+    {
+        SecurityReference securityReference = this.securityReferenceFactory.newEntityReference(entityReference);
+        try {
+            when(this.securityEntryReader.read(eq(securityReference)))
+                .thenReturn(new DefaultSecurityRuleEntry(
+                    securityReference,
+                    new ArrayList<SecurityRule>(rules)
+                ));
+        } catch (AuthorizationException e) {
+            fail("Error: securityEntryReader.read should not have failed");
+        }
+    }
 
     /**
      * Test that if we have a document with no parent, we get every rules of that document as actual rules (normalized)
@@ -60,20 +104,21 @@ public class DefaultRightsReaderTest extends AbstractRightsTest
     void getActualRules_Wiki()
     {
         WikiReference testedWikiReference = new WikiReference("xwiki");
-        // Mock reference to main wiki
-        when(xwikiBridge.getMainWikiReference()).thenReturn(testedWikiReference);
         // return the following rules when rules are asked for the wiki
-        when(this.rightsReader.getRules(testedWikiReference, false))
-            .thenReturn(Arrays.<ReadableSecurityRule>asList(new WritableSecurityRuleImpl(
-                Collections.emptyList(),
-                Arrays.asList(new DocumentReference("xwiki", "XWiki", "Admin")),
+        this.mockEntityReferenceRules(testedWikiReference, Arrays.<ReadableSecurityRule>asList(
+            new XWikiSecurityRule(
                 new RightSet(Right.VIEW),
-                RuleState.ALLOW
-            )));
+                RuleState.ALLOW,
+                Arrays.asList(new DocumentReference("xwiki", "XWiki", "Admin")),
+                Collections.emptyList(),
+                true
+            )
+        ));
         // check what gets returned
         List<ReadableSecurityRule> inheritedRules = this.rightsReader.getActualRules(testedWikiReference);
-        assertEquals(1, inheritedRules.size());
-        assertContainsRule(inheritedRules,
+        List<ReadableSecurityRule> normalizedInheritedRules = this.securityRuleAbacus.normalizeRules(inheritedRules);
+        assertEquals(1, normalizedInheritedRules.size());
+        assertContainsRule(normalizedInheritedRules,
             new DocumentReference("xwiki", "XWiki", "Admin"),
             false,
             Arrays.<Right>asList(Right.VIEW),
@@ -90,23 +135,23 @@ public class DefaultRightsReaderTest extends AbstractRightsTest
     {
         WikiReference testedWikiReference = new WikiReference("xwiki");
         SpaceReference testedSpaceReference = new SpaceReference("SP1", testedWikiReference);
-        // Mock reference to main wiki
-        when(xwikiBridge.getMainWikiReference()).thenReturn(testedWikiReference);
         // return no rule at all for when rules are asked for the wiki
-        when(this.rightsReader.getRules(testedWikiReference, false))
-            .thenReturn(Collections.emptyList());
+        this.mockEntityReferenceRules(testedWikiReference, Collections.emptyList());
         // ... and the following rules for the space
-        when(this.rightsReader.getRules(testedSpaceReference, false))
-            .thenReturn(Arrays.<ReadableSecurityRule>asList(new WritableSecurityRuleImpl(
-                Collections.emptyList(),
-                Arrays.asList(new DocumentReference("xwiki", "XWiki", "Admin")),
+        this.mockEntityReferenceRules(testedSpaceReference, Arrays.<ReadableSecurityRule>asList(
+            new XWikiSecurityRule(
                 new RightSet(Right.VIEW),
-                RuleState.ALLOW
-            )));
+                RuleState.ALLOW,
+                Arrays.asList(new DocumentReference("xwiki", "XWiki", "Admin")),
+                Collections.emptyList(),
+                true
+            ))
+        );
         // check what gets returned
         List<ReadableSecurityRule> inheritedRules = this.rightsReader.getActualRules(testedSpaceReference);
-        assertEquals(1, inheritedRules.size());
-        assertContainsRule(inheritedRules,
+        List<ReadableSecurityRule> normalizedInheritedRules = this.securityRuleAbacus.normalizeRules(inheritedRules);
+        assertEquals(1, normalizedInheritedRules.size());
+        assertContainsRule(normalizedInheritedRules,
             new DocumentReference("xwiki", "XWiki", "Admin"),
             false,
             Arrays.<Right>asList(Right.VIEW),
@@ -122,23 +167,23 @@ public class DefaultRightsReaderTest extends AbstractRightsTest
     {
         WikiReference testedWikiReference = new WikiReference("xwiki");
         SpaceReference testedSpaceReference = new SpaceReference("SP1", testedWikiReference);
-        // Mock reference to main wiki
-        when(xwikiBridge.getMainWikiReference()).thenReturn(testedWikiReference);
         // return no rule at all for when rules are asked for the wiki
-        when(this.rightsReader.getRules(testedWikiReference, false))
-            .thenReturn(Arrays.<ReadableSecurityRule>asList(new WritableSecurityRuleImpl(
-                Collections.emptyList(),
-                Arrays.asList(new DocumentReference("xwiki", "XWiki", "Admin")),
+        this.mockEntityReferenceRules(testedWikiReference, Arrays.<ReadableSecurityRule>asList(
+            new XWikiSecurityRule(
                 new RightSet(Right.VIEW),
-                RuleState.ALLOW
-            )));
+                RuleState.ALLOW,
+                Arrays.asList(new DocumentReference("xwiki", "XWiki", "Admin")),
+                Collections.emptyList(),
+                true
+            ))
+        );
         // ... and the following rules for the space
-        when(this.rightsReader.getRules(testedSpaceReference, false))
-            .thenReturn(Collections.emptyList());
+        this.mockEntityReferenceRules(testedSpaceReference, Collections.emptyList());
         // check what gets returned
         List<ReadableSecurityRule> inheritedRules = this.rightsReader.getActualRules(testedSpaceReference);
-        assertEquals(1, inheritedRules.size());
-        assertContainsRule(inheritedRules,
+        List<ReadableSecurityRule> normalizedInheritedRules = this.securityRuleAbacus.normalizeRules(inheritedRules);
+        assertEquals(1, normalizedInheritedRules.size());
+        assertContainsRule(normalizedInheritedRules,
             new DocumentReference("xwiki", "XWiki", "Admin"),
             false,
             Arrays.<Right>asList(Right.VIEW),
@@ -155,34 +200,37 @@ public class DefaultRightsReaderTest extends AbstractRightsTest
     {
         WikiReference testedWikiReference = new WikiReference("xwiki");
         SpaceReference testedSpaceReference = new SpaceReference("SP1", testedWikiReference);
-        // Mock reference to main wiki
-        when(xwikiBridge.getMainWikiReference()).thenReturn(testedWikiReference);
         // return the following rule for when rules are asked for the wiki...
-        when(this.rightsReader.getRules(testedWikiReference, false))
-            .thenReturn(Arrays.<ReadableSecurityRule>asList(new WritableSecurityRuleImpl(
-                Arrays.asList(new DocumentReference("xwiki", "XWiki", "XWikiAdminGroup")),
-                Collections.emptyList(),
+        this.mockEntityReferenceRules(testedWikiReference, Arrays.<ReadableSecurityRule>asList(
+            new XWikiSecurityRule(
                 new RightSet(Right.VIEW),
-                RuleState.ALLOW
-            )));
-        // ... and a completely different rule for the space
-        when(this.rightsReader.getRules(testedSpaceReference, false))
-            .thenReturn(Arrays.<ReadableSecurityRule>asList(new WritableSecurityRuleImpl(
+                RuleState.ALLOW,
                 Collections.emptyList(),
-                Arrays.asList(new DocumentReference("xwiki", "XWiki", "Admin")),
+                Arrays.asList(new DocumentReference("xwiki", "XWiki", "XWikiAdminGroup")),
+                true
+            ))
+        );
+        // ... and a completely different rule for the space
+        this.mockEntityReferenceRules(testedSpaceReference, Arrays.<ReadableSecurityRule>asList(
+            new XWikiSecurityRule(
                 new RightSet(Right.EDIT),
-                RuleState.ALLOW
-            )));
+                RuleState.ALLOW,
+                Arrays.asList(new DocumentReference("xwiki", "XWiki", "Admin")),
+                Collections.emptyList(),
+                true
+            ))
+        );
         // check what gets returned
         List<ReadableSecurityRule> inheritedRules = this.rightsReader.getActualRules(testedSpaceReference);
-        assertEquals(2, inheritedRules.size());
-        assertContainsRule(inheritedRules,
+        List<ReadableSecurityRule> normalizedInheritedRules = this.securityRuleAbacus.normalizeRules(inheritedRules);
+        assertEquals(2, normalizedInheritedRules.size());
+        assertContainsRule(normalizedInheritedRules,
             new DocumentReference("xwiki", "XWiki", "XWikiAdminGroup"),
             true,
             Arrays.<Right>asList(Right.VIEW),
             RuleState.ALLOW
         );
-        assertContainsRule(inheritedRules,
+        assertContainsRule(normalizedInheritedRules,
             new DocumentReference("xwiki", "XWiki", "Admin"),
             false,
             Arrays.<Right>asList(Right.EDIT),
@@ -198,28 +246,31 @@ public class DefaultRightsReaderTest extends AbstractRightsTest
     {
         WikiReference testedWikiReference = new WikiReference("xwiki");
         SpaceReference testedSpaceReference = new SpaceReference("SP1", testedWikiReference);
-        // Mock reference to main wiki
-        when(xwikiBridge.getMainWikiReference()).thenReturn(testedWikiReference);
         // return the following rule for when rules are asked for the wiki...
-        when(this.rightsReader.getRules(testedWikiReference, false))
-            .thenReturn(Arrays.<ReadableSecurityRule>asList(new WritableSecurityRuleImpl(
-                Arrays.asList(new DocumentReference("xwiki", "XWiki", "XWikiAdminGroup")),
-                Collections.emptyList(),
+        this.mockEntityReferenceRules(testedWikiReference, Arrays.<ReadableSecurityRule>asList(
+            new XWikiSecurityRule(
                 new RightSet(Right.EDIT),
-                RuleState.ALLOW
-            )));
+                RuleState.ALLOW,
+                Collections.emptyList(),
+                Arrays.asList(new DocumentReference("xwiki", "XWiki", "XWikiAdminGroup")),
+                true
+            ))
+        );
         // ... and the exact same rule for the space
-        when(this.rightsReader.getRules(testedSpaceReference, false))
-            .thenReturn(Arrays.<ReadableSecurityRule>asList(new WritableSecurityRuleImpl(
-                Arrays.asList(new DocumentReference("xwiki", "XWiki", "XWikiAdminGroup")),
-                Collections.emptyList(),
+        this.mockEntityReferenceRules(testedSpaceReference, Arrays.<ReadableSecurityRule>asList(
+            new XWikiSecurityRule(
                 new RightSet(Right.EDIT),
-                RuleState.ALLOW
-            )));
+                RuleState.ALLOW,
+                Collections.emptyList(),
+                Arrays.asList(new DocumentReference("xwiki", "XWiki", "XWikiAdminGroup")),
+                true
+            ))
+        );
         // check what gets returned
         List<ReadableSecurityRule> inheritedRules = this.rightsReader.getActualRules(testedSpaceReference);
-        assertEquals(1, inheritedRules.size());
-        assertContainsRule(inheritedRules,
+        List<ReadableSecurityRule> normalizedInheritedRules = this.securityRuleAbacus.normalizeRules(inheritedRules);
+        assertEquals(1, normalizedInheritedRules.size());
+        assertContainsRule(normalizedInheritedRules,
             new DocumentReference("xwiki", "XWiki", "XWikiAdminGroup"),
             true,
             Arrays.<Right>asList(Right.EDIT),
@@ -236,29 +287,32 @@ public class DefaultRightsReaderTest extends AbstractRightsTest
     {
         WikiReference testedWikiReference = new WikiReference("xwiki");
         SpaceReference testedSpaceReference = new SpaceReference("SP1", testedWikiReference);
-        // Mock reference to main wiki
-        when(xwikiBridge.getMainWikiReference()).thenReturn(testedWikiReference);
         // return the following rule for when rules are asked for the wiki...
-        when(this.rightsReader.getRules(testedWikiReference, false))
-            .thenReturn(Arrays.<ReadableSecurityRule>asList(new WritableSecurityRuleImpl(
-                Arrays.asList(new DocumentReference("xwiki", "XWiki", "XWikiAdminGroup")),
-                Collections.emptyList(),
+        this.mockEntityReferenceRules(testedWikiReference, Arrays.<ReadableSecurityRule>asList(
+            new XWikiSecurityRule(
                 new RightSet(Right.VIEW),
-                RuleState.ALLOW
-            )));
-        // ... and the same rule for the space but with a different right
-        when(this.rightsReader.getRules(testedSpaceReference, false))
-            .thenReturn(Arrays.<ReadableSecurityRule>asList(new WritableSecurityRuleImpl(
-                Arrays.asList(new DocumentReference("xwiki", "XWiki", "XWikiAdminGroup")),
+                RuleState.ALLOW,
                 Collections.emptyList(),
+                Arrays.asList(new DocumentReference("xwiki", "XWiki", "XWikiAdminGroup")),
+                true
+            ))
+        );
+        // ... and the same rule for the space but with a different right
+        this.mockEntityReferenceRules(testedSpaceReference, Arrays.<ReadableSecurityRule>asList(
+            new XWikiSecurityRule(
                 new RightSet(Right.EDIT),
-                RuleState.ALLOW
-            )));
+                RuleState.ALLOW,
+                Collections.emptyList(),
+                Arrays.asList(new DocumentReference("xwiki", "XWiki", "XWikiAdminGroup")),
+                true
+            ))
+        );
         // check what gets returned
         List<ReadableSecurityRule> inheritedRules = this.rightsReader.getActualRules(testedSpaceReference);
-        assertEquals(1, inheritedRules.size());
+        List<ReadableSecurityRule> normalizedInheritedRules = this.securityRuleAbacus.normalizeRules(inheritedRules);
+        assertEquals(1, normalizedInheritedRules.size());
         // The two rules should have merge to 1 with both VIEW and EDIT rights
-        assertContainsRule(inheritedRules,
+        assertContainsRule(normalizedInheritedRules,
             new DocumentReference("xwiki", "XWiki", "XWikiAdminGroup"),
             true,
             Arrays.<Right>asList(Right.VIEW, Right.EDIT),
@@ -275,28 +329,31 @@ public class DefaultRightsReaderTest extends AbstractRightsTest
     {
         WikiReference testedWikiReference = new WikiReference("xwiki");
         SpaceReference testedSpaceReference = new SpaceReference("SP1", testedWikiReference);
-        // Mock reference to main wiki
-        when(xwikiBridge.getMainWikiReference()).thenReturn(testedWikiReference);
         // return the following rule for when rules are asked for the wiki...
-        when(this.rightsReader.getRules(testedWikiReference, false))
-            .thenReturn(Arrays.<ReadableSecurityRule>asList(new WritableSecurityRuleImpl(
+        this.mockEntityReferenceRules(testedWikiReference, Arrays.<ReadableSecurityRule>asList(
+            new XWikiSecurityRule(
+                new RightSet(Right.VIEW),
+                RuleState.ALLOW,
+                Collections.emptyList(),
                 Arrays.asList(new DocumentReference("xwiki", "XWiki", "XWikiAdminGroup")),
-                Collections.emptyList(),
-                new RightSet(Right.VIEW),
-                RuleState.ALLOW
-            )));
+                true
+            ))
+        );
         // ... and the same rule for the space but with a different subject
-        when(this.rightsReader.getRules(testedSpaceReference, false))
-            .thenReturn(Arrays.<ReadableSecurityRule>asList(new WritableSecurityRuleImpl(
-                Collections.emptyList(),
-                Arrays.asList(new DocumentReference("xwiki", "XWiki", "Admin")),
+        this.mockEntityReferenceRules(testedSpaceReference, Arrays.<ReadableSecurityRule>asList(
+            new XWikiSecurityRule(
                 new RightSet(Right.VIEW),
-                RuleState.ALLOW
-            )));
+                RuleState.ALLOW,
+                Arrays.asList(new DocumentReference("xwiki", "XWiki", "Admin")),
+                Collections.emptyList(),
+                true
+            ))
+        );
         // check what gets returned
         List<ReadableSecurityRule> inheritedRules = this.rightsReader.getActualRules(testedSpaceReference);
-        assertEquals(1, inheritedRules.size());
-        assertContainsRule(inheritedRules,
+        List<ReadableSecurityRule> normalizedInheritedRules = this.securityRuleAbacus.normalizeRules(inheritedRules);
+        assertEquals(1, normalizedInheritedRules.size());
+        assertContainsRule(normalizedInheritedRules,
             new DocumentReference("xwiki", "XWiki", "Admin"),
             false,
             Arrays.<Right>asList(Right.VIEW),
@@ -313,28 +370,31 @@ public class DefaultRightsReaderTest extends AbstractRightsTest
     {
         WikiReference testedWikiReference = new WikiReference("xwiki");
         SpaceReference testedSpaceReference = new SpaceReference("SP1", testedWikiReference);
-        // Mock reference to main wiki
-        when(xwikiBridge.getMainWikiReference()).thenReturn(testedWikiReference);
         // return the following rule for when rules are asked for the wiki...
-        when(this.rightsReader.getRules(testedWikiReference, false))
-            .thenReturn(Arrays.<ReadableSecurityRule>asList(new WritableSecurityRuleImpl(
-                Arrays.asList(new DocumentReference("xwiki", "XWiki", "XWikiAdminGroup")),
-                Collections.emptyList(),
+        this.mockEntityReferenceRules(testedWikiReference, Arrays.<ReadableSecurityRule>asList(
+            new XWikiSecurityRule(
                 new RightSet(Right.VIEW, Right.COMMENT),
-                RuleState.ALLOW
-            )));
-        // ... and the same rule for the space but with more rights
-        when(this.rightsReader.getRules(testedSpaceReference, false))
-            .thenReturn(Arrays.<ReadableSecurityRule>asList(new WritableSecurityRuleImpl(
-                Arrays.asList(new DocumentReference("xwiki", "XWiki", "XWikiAdminGroup")),
+                RuleState.ALLOW,
                 Collections.emptyList(),
+                Arrays.asList(new DocumentReference("xwiki", "XWiki", "XWikiAdminGroup")),
+                true
+            ))
+        );
+        // ... and the same rule for the space but with more rights
+        this.mockEntityReferenceRules(testedSpaceReference, Arrays.<ReadableSecurityRule>asList(
+            new XWikiSecurityRule(
                 new RightSet(Right.VIEW),
-                RuleState.ALLOW
-            )));
+                RuleState.ALLOW,
+                Collections.emptyList(),
+                Arrays.asList(new DocumentReference("xwiki", "XWiki", "XWikiAdminGroup")),
+                true
+            ))
+        );
         // check what gets returned
         List<ReadableSecurityRule> inheritedRules = this.rightsReader.getActualRules(testedSpaceReference);
-        assertEquals(1, inheritedRules.size());
-        assertContainsRule(inheritedRules,
+        List<ReadableSecurityRule> normalizedInheritedRules = this.securityRuleAbacus.normalizeRules(inheritedRules);
+        assertEquals(1, normalizedInheritedRules.size());
+        assertContainsRule(normalizedInheritedRules,
             new DocumentReference("xwiki", "XWiki", "XWikiAdminGroup"),
             true,
             Arrays.<Right>asList(Right.VIEW, Right.COMMENT),
@@ -351,34 +411,37 @@ public class DefaultRightsReaderTest extends AbstractRightsTest
     {
         WikiReference testedWikiReference = new WikiReference("xwiki");
         SpaceReference testedSpaceReference = new SpaceReference("SP1", testedWikiReference);
-        // Mock reference to main wiki
-        when(xwikiBridge.getMainWikiReference()).thenReturn(testedWikiReference);
         // return the following rule for when rules are asked for the wiki...
-        when(this.rightsReader.getRules(testedWikiReference, false))
-            .thenReturn(Arrays.<ReadableSecurityRule>asList(new WritableSecurityRuleImpl(
-                Arrays.asList(new DocumentReference("xwiki", "XWiki", "XWikiAdminGroup")),
-                Collections.emptyList(),
+        this.mockEntityReferenceRules(testedWikiReference, Arrays.<ReadableSecurityRule>asList(
+            new XWikiSecurityRule(
                 new RightSet(Right.VIEW, Right.COMMENT),
-                RuleState.ALLOW
-            )));
-        // ... and the same rule for the space but with a different user and more rights
-        when(this.rightsReader.getRules(testedSpaceReference, false))
-            .thenReturn(Arrays.<ReadableSecurityRule>asList(new WritableSecurityRuleImpl(
+                RuleState.ALLOW,
                 Collections.emptyList(),
-                Arrays.asList(new DocumentReference("xwiki", "XWiki", "Admin")),
+                Arrays.asList(new DocumentReference("xwiki", "XWiki", "XWikiAdminGroup")),
+                true
+            ))
+        );
+        // ... and the same rule for the space but with a different user and more rights
+        this.mockEntityReferenceRules(testedSpaceReference, Arrays.<ReadableSecurityRule>asList(
+            new XWikiSecurityRule(
                 new RightSet(Right.VIEW),
-                RuleState.ALLOW
-            )));
+                RuleState.ALLOW,
+                Arrays.asList(new DocumentReference("xwiki", "XWiki", "Admin")),
+                Collections.emptyList(),
+                true
+            ))
+        );
         // check what gets returned
         List<ReadableSecurityRule> inheritedRules = this.rightsReader.getActualRules(testedSpaceReference);
-        assertEquals(2, inheritedRules.size());
-        assertContainsRule(inheritedRules,
+        List<ReadableSecurityRule> normalizedInheritedRules = this.securityRuleAbacus.normalizeRules(inheritedRules);
+        assertEquals(2, normalizedInheritedRules.size());
+        assertContainsRule(normalizedInheritedRules,
             new DocumentReference("xwiki", "XWiki", "XWikiAdminGroup"),
             true,
             Arrays.<Right>asList(Right.COMMENT),
             RuleState.ALLOW
         );
-        assertContainsRule(inheritedRules,
+        assertContainsRule(normalizedInheritedRules,
             new DocumentReference("xwiki", "XWiki", "Admin"),
             false,
             Arrays.<Right>asList(Right.VIEW),
@@ -395,34 +458,37 @@ public class DefaultRightsReaderTest extends AbstractRightsTest
     {
         WikiReference testedWikiReference = new WikiReference("xwiki");
         SpaceReference testedSpaceReference = new SpaceReference("SP1", testedWikiReference);
-        // Mock reference to main wiki
-        when(xwikiBridge.getMainWikiReference()).thenReturn(testedWikiReference);
         // return the following rule for when rules are asked for the wiki...
-        when(this.rightsReader.getRules(testedWikiReference, false))
-            .thenReturn(Arrays.<ReadableSecurityRule>asList(new WritableSecurityRuleImpl(
-                Arrays.asList(new DocumentReference("xwiki", "XWiki", "XWikiAdminGroup")),
-                Arrays.asList(new DocumentReference("xwiki", "XWiki", "XWikiGuest")),
+        this.mockEntityReferenceRules(testedWikiReference, Arrays.<ReadableSecurityRule>asList(
+            new XWikiSecurityRule(
                 new RightSet(Right.VIEW),
-                RuleState.ALLOW
-            )));
-        // ... and the same rule for the space but with a different subject and more rights
-        when(this.rightsReader.getRules(testedSpaceReference, false))
-            .thenReturn(Arrays.<ReadableSecurityRule>asList(new WritableSecurityRuleImpl(
+                RuleState.ALLOW,
+                Arrays.asList(new DocumentReference("xwiki", "XWiki", "XWikiGuest")),
                 Arrays.asList(new DocumentReference("xwiki", "XWiki", "XWikiAdminGroup")),
-                Collections.emptyList(),
+                true
+            ))
+        );
+        // ... and the same rule for the space but with a different subject and more rights
+        this.mockEntityReferenceRules(testedSpaceReference, Arrays.<ReadableSecurityRule>asList(
+            new XWikiSecurityRule(
                 new RightSet(Right.EDIT),
-                RuleState.ALLOW
-            )));
+                RuleState.ALLOW,
+                Collections.emptyList(),
+                Arrays.asList(new DocumentReference("xwiki", "XWiki", "XWikiAdminGroup")),
+                true
+            ))
+        );
         // check what gets returned
         List<ReadableSecurityRule> inheritedRules = this.rightsReader.getActualRules(testedSpaceReference);
-        assertEquals(2, inheritedRules.size());
-        assertContainsRule(inheritedRules,
+        List<ReadableSecurityRule> normalizedInheritedRules = this.securityRuleAbacus.normalizeRules(inheritedRules);
+        assertEquals(2, normalizedInheritedRules.size());
+        assertContainsRule(normalizedInheritedRules,
             new DocumentReference("xwiki", "XWiki", "XWikiAdminGroup"),
             true,
             Arrays.<Right>asList(Right.VIEW, Right.EDIT),
             RuleState.ALLOW
         );
-        assertContainsRule(inheritedRules,
+        assertContainsRule(normalizedInheritedRules,
             new DocumentReference("xwiki", "XWiki", "XWikiGuest"),
             false,
             Arrays.<Right>asList(Right.VIEW),
@@ -439,28 +505,31 @@ public class DefaultRightsReaderTest extends AbstractRightsTest
     {
         WikiReference testedWikiReference = new WikiReference("xwiki");
         SpaceReference testedSpaceReference = new SpaceReference("SP1", testedWikiReference);
-        // Mock reference to main wiki
-        when(xwikiBridge.getMainWikiReference()).thenReturn(testedWikiReference);
         // return the following rule for when rules are asked for the wiki...
-        when(this.rightsReader.getRules(testedWikiReference, false))
-            .thenReturn(Arrays.<ReadableSecurityRule>asList(new WritableSecurityRuleImpl(
-                Arrays.asList(new DocumentReference("xwiki", "XWiki", "XWikiAdminGroup")),
+        this.mockEntityReferenceRules(testedWikiReference, Arrays.<ReadableSecurityRule>asList(
+            new XWikiSecurityRule(
+                new RightSet(Right.VIEW),
+                RuleState.ALLOW,
                 Arrays.asList(new DocumentReference("xwiki", "XWiki", "XWikiGuest")),
-                new RightSet(Right.VIEW),
-                RuleState.ALLOW
-            )));
-        // ... and the same rule for the space but with a different subject and more rights
-        when(this.rightsReader.getRules(testedSpaceReference, false))
-            .thenReturn(Arrays.<ReadableSecurityRule>asList(new WritableSecurityRuleImpl(
                 Arrays.asList(new DocumentReference("xwiki", "XWiki", "XWikiAdminGroup")),
-                Collections.emptyList(),
+                true
+            ))
+        );
+        // ... and the same rule for the space but with a different subject and more rights
+        this.mockEntityReferenceRules(testedSpaceReference, Arrays.<ReadableSecurityRule>asList(
+            new XWikiSecurityRule(
                 new RightSet(Right.VIEW),
-                RuleState.ALLOW
-            )));
+                RuleState.ALLOW,
+                Collections.emptyList(),
+                Arrays.asList(new DocumentReference("xwiki", "XWiki", "XWikiAdminGroup")),
+                true
+            ))
+        );
         // check what gets returned
         List<ReadableSecurityRule> inheritedRules = this.rightsReader.getActualRules(testedSpaceReference);
-        assertEquals(1, inheritedRules.size());
-        assertContainsRule(inheritedRules,
+        List<ReadableSecurityRule> normalizedInheritedRules = this.securityRuleAbacus.normalizeRules(inheritedRules);
+        assertEquals(1, normalizedInheritedRules.size());
+        assertContainsRule(normalizedInheritedRules,
             new DocumentReference("xwiki", "XWiki", "XWikiAdminGroup"),
             true,
             Arrays.<Right>asList(Right.VIEW),
@@ -477,28 +546,31 @@ public class DefaultRightsReaderTest extends AbstractRightsTest
     {
         WikiReference testedWikiReference = new WikiReference("xwiki");
         SpaceReference testedSpaceReference = new SpaceReference("SP1", testedWikiReference);
-        // Mock reference to main wiki
-        when(xwikiBridge.getMainWikiReference()).thenReturn(testedWikiReference);
         // return the following rule for when rules are asked for the wiki...
-        when(this.rightsReader.getRules(testedWikiReference, false))
-            .thenReturn(Arrays.<ReadableSecurityRule>asList(new WritableSecurityRuleImpl(
-                Arrays.asList(new DocumentReference("xwiki", "XWiki", "XWikiAdminGroup")),
+        this.mockEntityReferenceRules(testedWikiReference, Arrays.<ReadableSecurityRule>asList(
+            new XWikiSecurityRule(
+                new RightSet(Right.VIEW),
+                RuleState.ALLOW,
                 Arrays.asList(new DocumentReference("xwiki", "XWiki", "XWikiGuest")),
-                new RightSet(Right.VIEW),
-                RuleState.ALLOW
-            )));
+                Arrays.asList(new DocumentReference("xwiki", "XWiki", "XWikiAdminGroup")),
+                true
+            ))
+        );
         // ... and the same rule for the space but with a different subject and more rights
-        when(this.rightsReader.getRules(testedSpaceReference, false))
-            .thenReturn(Arrays.<ReadableSecurityRule>asList(new WritableSecurityRuleImpl(
-                Collections.emptyList(),
-                Arrays.asList(new DocumentReference("xwiki", "XWiki", "Bob")),
+        this.mockEntityReferenceRules(testedSpaceReference, Arrays.<ReadableSecurityRule>asList(
+            new XWikiSecurityRule(
                 new RightSet(Right.VIEW),
-                RuleState.ALLOW
-            )));
+                RuleState.ALLOW,
+                Arrays.asList(new DocumentReference("xwiki", "XWiki", "Bob")),
+                Collections.emptyList(),
+                true
+            ))
+        );
         // check what gets returned
         List<ReadableSecurityRule> inheritedRules = this.rightsReader.getActualRules(testedSpaceReference);
-        assertEquals(1, inheritedRules.size());
-        assertContainsRule(inheritedRules,
+        List<ReadableSecurityRule> normalizedInheritedRules = this.securityRuleAbacus.normalizeRules(inheritedRules);
+        assertEquals(1, normalizedInheritedRules.size());
+        assertContainsRule(normalizedInheritedRules,
             new DocumentReference("xwiki", "XWiki", "Bob"),
             false,
             Arrays.<Right>asList(Right.VIEW),
@@ -516,26 +588,25 @@ public class DefaultRightsReaderTest extends AbstractRightsTest
         WikiReference testedWikiReference = new WikiReference("xwiki");
         SpaceReference testedSpaceReference = new SpaceReference("SP1", testedWikiReference);
         DocumentReference testedDocumentReference = new DocumentReference("DOC1", testedSpaceReference);
-        // Mock reference to main wiki
-        when(xwikiBridge.getMainWikiReference()).thenReturn(testedWikiReference);
         // return the following rule for when rules are asked for the wiki...
-        when(this.rightsReader.getRules(testedWikiReference, false))
-            .thenReturn(Collections.emptyList());
+        this.mockEntityReferenceRules(testedWikiReference, Collections.emptyList());
         // ... and a completely different rule for the space ...
-        when(this.rightsReader.getRules(testedSpaceReference, false))
-            .thenReturn(Collections.emptyList());
+        this.mockEntityReferenceRules(testedSpaceReference, Collections.emptyList());
         // ... and a completely different rule for the document ...
-        when(this.rightsReader.getRules(testedDocumentReference, false))
-            .thenReturn(Arrays.<ReadableSecurityRule>asList(new WritableSecurityRuleImpl(
-                Collections.emptyList(),
-                Arrays.asList(new DocumentReference("xwiki", "XWiki", "Admin")),
+        this.mockEntityReferenceRules(testedDocumentReference, Arrays.<ReadableSecurityRule>asList(
+            new XWikiSecurityRule(
                 new RightSet(Right.VIEW),
-                RuleState.ALLOW
-            )));
+                RuleState.ALLOW,
+                Arrays.asList(new DocumentReference("xwiki", "XWiki", "Admin")),
+                Collections.emptyList(),
+                true
+            ))
+        );
         // check what gets returned
         List<ReadableSecurityRule> inheritedRules = this.rightsReader.getActualRules(testedDocumentReference);
-        assertEquals(1, inheritedRules.size());
-        assertContainsRule(inheritedRules,
+        List<ReadableSecurityRule> normalizedInheritedRules = this.securityRuleAbacus.normalizeRules(inheritedRules);
+        assertEquals(1, normalizedInheritedRules.size());
+        assertContainsRule(normalizedInheritedRules,
             new DocumentReference("xwiki", "XWiki", "Admin"),
             false,
             Arrays.<Right>asList(Right.VIEW),
@@ -552,48 +623,53 @@ public class DefaultRightsReaderTest extends AbstractRightsTest
         WikiReference testedWikiReference = new WikiReference("xwiki");
         SpaceReference testedSpaceReference = new SpaceReference("SP1", testedWikiReference);
         DocumentReference testedDocumentReference = new DocumentReference("DOC1", testedSpaceReference);
-        // Mock reference to main wiki
-        when(xwikiBridge.getMainWikiReference()).thenReturn(testedWikiReference);
         // return the following rule for when rules are asked for the wiki...
-        when(this.rightsReader.getRules(testedWikiReference, false))
-            .thenReturn(Arrays.<ReadableSecurityRule>asList(new WritableSecurityRuleImpl(
-                Arrays.asList(new DocumentReference("xwiki", "XWiki", "XWikiAdminGroup")),
-                Collections.emptyList(),
+        this.mockEntityReferenceRules(testedWikiReference, Arrays.<ReadableSecurityRule>asList(
+            new XWikiSecurityRule(
                 new RightSet(Right.VIEW),
-                RuleState.ALLOW
-            )));
+                RuleState.ALLOW,
+                Collections.emptyList(),
+                Arrays.asList(new DocumentReference("xwiki", "XWiki", "XWikiAdminGroup")),
+                true
+            ))
+        );
         // ... and a completely different rule for the space ...
-        when(this.rightsReader.getRules(testedSpaceReference, false))
-            .thenReturn(Arrays.<ReadableSecurityRule>asList(new WritableSecurityRuleImpl(
-                Collections.emptyList(),
-                Arrays.asList(new DocumentReference("xwiki", "XWiki", "Admin")),
+        this.mockEntityReferenceRules(testedSpaceReference, Arrays.<ReadableSecurityRule>asList(
+            new XWikiSecurityRule(
                 new RightSet(Right.COMMENT),
-                RuleState.ALLOW
-            )));
-        // ... and a completely different rule for the document ...
-        when(this.rightsReader.getRules(testedDocumentReference, false))
-            .thenReturn(Arrays.<ReadableSecurityRule>asList(new WritableSecurityRuleImpl(
+                RuleState.ALLOW,
+                Arrays.asList(new DocumentReference("xwiki", "XWiki", "Admin")),
                 Collections.emptyList(),
-                Arrays.asList(new DocumentReference("xwiki", "XWiki", "Bob")),
+                true
+            ))
+        );
+        // ... and a completely different rule for the document ...
+        this.mockEntityReferenceRules(testedDocumentReference, Arrays.<ReadableSecurityRule>asList(
+            new XWikiSecurityRule(
                 new RightSet(Right.EDIT),
-                RuleState.ALLOW
-            )));
+                RuleState.ALLOW,
+                Arrays.asList(new DocumentReference("xwiki", "XWiki", "Bob")),
+                Collections.emptyList(),
+                true
+            ))
+        );
         // check what gets returned
         List<ReadableSecurityRule> inheritedRules = this.rightsReader.getActualRules(testedDocumentReference);
-        assertEquals(3, inheritedRules.size());
-        assertContainsRule(inheritedRules,
+        List<ReadableSecurityRule> normalizedInheritedRules = this.securityRuleAbacus.normalizeRules(inheritedRules);
+        assertEquals(3, normalizedInheritedRules.size());
+        assertContainsRule(normalizedInheritedRules,
             new DocumentReference("xwiki", "XWiki", "XWikiAdminGroup"),
             true,
             Arrays.<Right>asList(Right.VIEW),
             RuleState.ALLOW
         );
-        assertContainsRule(inheritedRules,
+        assertContainsRule(normalizedInheritedRules,
             new DocumentReference("xwiki", "XWiki", "Admin"),
             false,
             Arrays.<Right>asList(Right.COMMENT),
             RuleState.ALLOW
         );
-        assertContainsRule(inheritedRules,
+        assertContainsRule(normalizedInheritedRules,
             new DocumentReference("xwiki", "XWiki", "Bob"),
             false,
             Arrays.<Right>asList(Right.EDIT),
@@ -610,37 +686,39 @@ public class DefaultRightsReaderTest extends AbstractRightsTest
         WikiReference testedWikiReference = new WikiReference("xwiki");
         SpaceReference testedSpaceReference = new SpaceReference("SP1", testedWikiReference);
         DocumentReference testedDocumentReference = new DocumentReference("DOC1", testedSpaceReference);
-        // Mock reference to main wiki
-        when(xwikiBridge.getMainWikiReference()).thenReturn(testedWikiReference);
         // return the following rule for when rules are asked for the wiki...
-        when(this.rightsReader.getRules(testedWikiReference, false))
-            .thenReturn(Arrays.<ReadableSecurityRule>asList(new WritableSecurityRuleImpl(
-                Arrays.asList(new DocumentReference("xwiki", "XWiki", "XWikiAdminGroup")),
-                Collections.emptyList(),
+        this.mockEntityReferenceRules(testedWikiReference, Arrays.<ReadableSecurityRule>asList(
+            new XWikiSecurityRule(
                 new RightSet(Right.VIEW),
-                RuleState.ALLOW
-            )));
-        // ... and no rule for the space ...
-        when(this.rightsReader.getRules(testedSpaceReference, false))
-            .thenReturn(Collections.emptyList());
-        // ... and a completely different rule for the document ...
-        when(this.rightsReader.getRules(testedDocumentReference, false))
-            .thenReturn(Arrays.<ReadableSecurityRule>asList(new WritableSecurityRuleImpl(
+                RuleState.ALLOW,
                 Collections.emptyList(),
-                Arrays.asList(new DocumentReference("xwiki", "XWiki", "Bob")),
+                Arrays.asList(new DocumentReference("xwiki", "XWiki", "XWikiAdminGroup")),
+                true
+            ))
+        );
+        // ... and no rule for the space ...
+        this.mockEntityReferenceRules(testedSpaceReference, Collections.emptyList());
+        // ... and a completely different rule for the document ...
+        this.mockEntityReferenceRules(testedDocumentReference, Arrays.<ReadableSecurityRule>asList(
+            new XWikiSecurityRule(
                 new RightSet(Right.EDIT),
-                RuleState.ALLOW
-            )));
+                RuleState.ALLOW,
+                Arrays.asList(new DocumentReference("xwiki", "XWiki", "Bob")),
+                Collections.emptyList(),
+                true
+            ))
+        );
         // check what gets returned
         List<ReadableSecurityRule> inheritedRules = this.rightsReader.getActualRules(testedDocumentReference);
-        assertEquals(2, inheritedRules.size());
-        assertContainsRule(inheritedRules,
+        List<ReadableSecurityRule> normalizedInheritedRules = this.securityRuleAbacus.normalizeRules(inheritedRules);
+        assertEquals(2, normalizedInheritedRules.size());
+        assertContainsRule(normalizedInheritedRules,
             new DocumentReference("xwiki", "XWiki", "XWikiAdminGroup"),
             true,
             Arrays.<Right>asList(Right.VIEW),
             RuleState.ALLOW
         );
-        assertContainsRule(inheritedRules,
+        assertContainsRule(normalizedInheritedRules,
             new DocumentReference("xwiki", "XWiki", "Bob"),
             false,
             Arrays.<Right>asList(Right.EDIT),
@@ -657,31 +735,33 @@ public class DefaultRightsReaderTest extends AbstractRightsTest
         WikiReference testedWikiReference = new WikiReference("xwiki");
         SpaceReference testedSpaceReference = new SpaceReference("SP1", testedWikiReference);
         DocumentReference testedDocumentReference = new DocumentReference("DOC1", testedSpaceReference);
-        // Mock reference to main wiki
-        when(xwikiBridge.getMainWikiReference()).thenReturn(testedWikiReference);
         // return the following rule for when rules are asked for the wiki...
-        when(this.rightsReader.getRules(testedWikiReference, false))
-            .thenReturn(Arrays.<ReadableSecurityRule>asList(new WritableSecurityRuleImpl(
-                Arrays.asList(new DocumentReference("xwiki", "XWiki", "XWikiAdminGroup")),
-                Collections.emptyList(),
+        this.mockEntityReferenceRules(testedWikiReference, Arrays.<ReadableSecurityRule>asList(
+            new XWikiSecurityRule(
                 new RightSet(Right.VIEW),
-                RuleState.ALLOW
-            )));
+                RuleState.ALLOW,
+                Collections.emptyList(),
+                Arrays.asList(new DocumentReference("xwiki", "XWiki", "XWikiAdminGroup")),
+                true
+            ))
+        );
         // ... and no rule for the space ...
-        when(this.rightsReader.getRules(testedSpaceReference, false))
-            .thenReturn(Collections.emptyList());
+        this.mockEntityReferenceRules(testedSpaceReference, Collections.emptyList());
         // ... and a completely different rule for the document ...
-        when(this.rightsReader.getRules(testedDocumentReference, false))
-            .thenReturn(Arrays.<ReadableSecurityRule>asList(new WritableSecurityRuleImpl(
-                Arrays.asList(new DocumentReference("xwiki", "XWiki", "XWikiAdminGroup")),
-                Collections.emptyList(),
+        this.mockEntityReferenceRules(testedDocumentReference, Arrays.<ReadableSecurityRule>asList(
+            new XWikiSecurityRule(
                 new RightSet(Right.VIEW),
-                RuleState.ALLOW
-            )));
+                RuleState.ALLOW,
+                Collections.emptyList(),
+                Arrays.asList(new DocumentReference("xwiki", "XWiki", "XWikiAdminGroup")),
+                true
+            ))
+        );
         // check what gets returned
         List<ReadableSecurityRule> inheritedRules = this.rightsReader.getActualRules(testedDocumentReference);
-        assertEquals(1, inheritedRules.size());
-        assertContainsRule(inheritedRules,
+        List<ReadableSecurityRule> normalizedInheritedRules = this.securityRuleAbacus.normalizeRules(inheritedRules);
+        assertEquals(1, normalizedInheritedRules.size());
+        assertContainsRule(normalizedInheritedRules,
             new DocumentReference("xwiki", "XWiki", "XWikiAdminGroup"),
             true,
             Arrays.<Right>asList(Right.VIEW),
@@ -697,34 +777,37 @@ public class DefaultRightsReaderTest extends AbstractRightsTest
     {
         WikiReference testedWikiReference = new WikiReference("xwiki");
         WikiReference testedSubWikiReference = new WikiReference("subwiki");
-        // Mock reference to main wiki
-        when(xwikiBridge.getMainWikiReference()).thenReturn(testedWikiReference);
         // return the following rule for when rules are asked for the wiki...
-        when(this.rightsReader.getRules(testedWikiReference, false))
-            .thenReturn(Arrays.<ReadableSecurityRule>asList(new WritableSecurityRuleImpl(
-                Arrays.asList(new DocumentReference("xwiki", "XWiki", "XWikiAdminGroup")),
-                Collections.emptyList(),
+        this.mockEntityReferenceRules(testedWikiReference, Arrays.<ReadableSecurityRule>asList(
+            new XWikiSecurityRule(
                 new RightSet(Right.VIEW),
-                RuleState.ALLOW
-            )));
-        // ... and a completely different rule for the subwiki
-        when(this.rightsReader.getRules(testedSubWikiReference, false))
-            .thenReturn(Arrays.<ReadableSecurityRule>asList(new WritableSecurityRuleImpl(
+                RuleState.ALLOW,
                 Collections.emptyList(),
-                Arrays.asList(new DocumentReference("xwiki", "XWiki", "Admin")),
+                Arrays.asList(new DocumentReference("xwiki", "XWiki", "XWikiAdminGroup")),
+                true
+            ))
+        );
+        // ... and a completely different rule for the subwiki
+        this.mockEntityReferenceRules(testedSubWikiReference, Arrays.<ReadableSecurityRule>asList(
+            new XWikiSecurityRule(
                 new RightSet(Right.EDIT),
-                RuleState.ALLOW
-            )));
+                RuleState.ALLOW,
+                Arrays.asList(new DocumentReference("xwiki", "XWiki", "Admin")),
+                Collections.emptyList(),
+                true
+            ))
+        );
         // check what gets returned
         List<ReadableSecurityRule> inheritedRules = this.rightsReader.getActualRules(testedSubWikiReference);
-        assertEquals(2, inheritedRules.size());
-        assertContainsRule(inheritedRules,
+        List<ReadableSecurityRule> normalizedInheritedRules = this.securityRuleAbacus.normalizeRules(inheritedRules);
+        assertEquals(2, normalizedInheritedRules.size());
+        assertContainsRule(normalizedInheritedRules,
             new DocumentReference("xwiki", "XWiki", "XWikiAdminGroup"),
             true,
             Arrays.<Right>asList(Right.VIEW),
             RuleState.ALLOW
         );
-        assertContainsRule(inheritedRules,
+        assertContainsRule(normalizedInheritedRules,
             new DocumentReference("xwiki", "XWiki", "Admin"),
             false,
             Arrays.<Right>asList(Right.EDIT),

@@ -20,6 +20,7 @@
 package org.xwiki.contrib.rights.internal;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -30,16 +31,15 @@ import javax.inject.Singleton;
 import org.xwiki.component.annotation.Component;
 import org.xwiki.contrib.rights.RightsReader;
 import org.xwiki.contrib.rights.WritableSecurityRule;
-import org.xwiki.model.EntityType;
 import org.xwiki.model.reference.EntityReference;
-import org.xwiki.model.reference.WikiReference;
 import org.xwiki.security.SecurityReference;
 import org.xwiki.security.SecurityReferenceFactory;
 import org.xwiki.security.authorization.AuthorizationException;
 import org.xwiki.security.authorization.ReadableSecurityRule;
 import org.xwiki.security.authorization.RightSet;
 import org.xwiki.security.authorization.SecurityEntryReader;
-import org.xwiki.security.internal.XWikiBridge;
+import org.xwiki.security.authorization.SecurityRule;
+import org.xwiki.security.authorization.SecurityRuleEntry;
 
 /**
  * @version $Id$
@@ -54,9 +54,6 @@ public class DefaultRightsReader implements RightsReader
 
     @Inject
     private SecurityReferenceFactory securityReferenceFactory;
-
-    @Inject
-    private XWikiBridge xwikiBridge;
 
     /**
      * {@inheritDoc}
@@ -93,7 +90,9 @@ public class DefaultRightsReader implements RightsReader
     {
         SecurityReference reference = securityReferenceFactory.newEntityReference(ref);
         try {
-            return securityEntryReader.read(reference).getRules().stream()
+            SecurityRuleEntry securityRuleEntry = securityEntryReader.read(reference);
+            Collection<SecurityRule> securityRules = securityRuleEntry.getRules();
+            return securityRules.stream()
                 .filter(k -> k instanceof ReadableSecurityRule)
                 .filter(k -> ((ReadableSecurityRule) k).isPersisted())
                 .map(k -> (ReadableSecurityRule) k)
@@ -119,10 +118,10 @@ public class DefaultRightsReader implements RightsReader
         List<ReadableSecurityRule> actualRules = new ArrayList<>();
 
         // Go up the parent tree to get actual rules
-        EntityReference entityReferenceToGetRules = entityReference;
+        SecurityReference securityReference = securityReferenceFactory.newEntityReference(entityReference);
 
         do {
-            List<ReadableSecurityRule> inheritedPageRules = this.getRules(entityReferenceToGetRules, false);
+            List<ReadableSecurityRule> inheritedPageRules = this.getRules(securityReference, false);
             // We need to treat every groups and users on the page before flagging the rights as inherited
             // So we keep track of which rights are explicitly set on this parent page to remove them afterwards
             RightSet toBeAddedExplicitRights = new RightSet();
@@ -143,17 +142,9 @@ public class DefaultRightsReader implements RightsReader
 
             // Add every rights we explicitly encountered on the page
             encounteredExplicitRights.addAll(toBeAddedExplicitRights);
-            // Go to the parent page
-            // Also goes up the main wiki if subwiki
-            if (entityReferenceToGetRules.getType() == EntityType.WIKI) {
-                WikiReference mainWiki = xwikiBridge.getMainWikiReference();
-                entityReferenceToGetRules = entityReferenceToGetRules != mainWiki ? mainWiki : null;
-            } else {
-                entityReferenceToGetRules = entityReferenceToGetRules.getParent();
-            }
-        } while (entityReferenceToGetRules != null);
-
-
+            // Go to the parent security reference (parent space or main wiki)
+            securityReference = securityReference.getParentSecurityReference();
+        } while (securityReference != null);
 
         return actualRules;
     }

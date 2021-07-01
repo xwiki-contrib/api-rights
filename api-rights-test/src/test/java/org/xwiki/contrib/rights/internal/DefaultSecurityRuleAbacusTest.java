@@ -25,14 +25,22 @@ import java.util.List;
 
 import org.junit.jupiter.api.Test;
 import org.xwiki.contrib.rights.RightsReader;
+import org.xwiki.model.internal.DefaultModelConfiguration;
+import org.xwiki.model.internal.reference.DefaultEntityReferenceProvider;
+import org.xwiki.model.internal.reference.DefaultStringEntityReferenceSerializer;
+import org.xwiki.model.internal.reference.DefaultSymbolScheme;
 import org.xwiki.model.reference.DocumentReference;
 import org.xwiki.security.authorization.ReadableSecurityRule;
 import org.xwiki.security.authorization.Right;
 import org.xwiki.security.authorization.RightSet;
 import org.xwiki.security.authorization.RuleState;
+import org.xwiki.test.annotation.ComponentList;
 import org.xwiki.test.junit5.mockito.ComponentTest;
 import org.xwiki.test.junit5.mockito.InjectMockComponents;
 import org.xwiki.test.junit5.mockito.MockComponent;
+
+import com.xpn.xwiki.internal.model.reference.CurrentMixedEntityReferenceProvider;
+import com.xpn.xwiki.internal.model.reference.CurrentMixedStringDocumentReferenceResolver;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -41,7 +49,14 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * @version $Id$
  */
 @ComponentTest
-@DefaultRightsTestComponentList
+@ComponentList({
+    CurrentMixedStringDocumentReferenceResolver.class,
+    DefaultStringEntityReferenceSerializer.class,
+    DefaultSymbolScheme.class,
+    DefaultEntityReferenceProvider.class,
+    CurrentMixedEntityReferenceProvider.class,
+    DefaultModelConfiguration.class,
+})
 public class DefaultSecurityRuleAbacusTest extends AbstractRightsTest
 {
     @InjectMockComponents
