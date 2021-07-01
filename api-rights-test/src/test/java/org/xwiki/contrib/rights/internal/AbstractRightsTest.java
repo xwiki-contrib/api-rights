@@ -27,7 +27,6 @@ import org.xwiki.security.authorization.Right;
 import org.xwiki.security.authorization.RightSet;
 import org.xwiki.security.authorization.RuleState;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -72,7 +71,8 @@ public class AbstractRightsTest
             boolean matches = false;
             List<DocumentReference> subjectsList = subjectIsGroup ? r.getGroups() : r.getUsers();
             if (subjectsList != null && subjectsList.size() == 1 && subjectsList.contains(expectedSubject)
-                && expectedRuleState == r.getState()) {
+                && expectedRuleState == r.getState())
+            {
                 // only match if the other subjects are null
                 List<DocumentReference> otherSubjects = !subjectIsGroup ? r.getGroups() : r.getUsers();
                 if (otherSubjects == null || otherSubjects.isEmpty()) {
@@ -90,8 +90,7 @@ public class AbstractRightsTest
         }
         // check that a rule was found
         assertNotNull(foundRule,
-            "No rule only for subject " + expectedSubject + " and state " + expectedRuleState.name() +
-            " was found");
+            "No rule only for subject " + expectedSubject + " and state " + expectedRuleState.name() + " was found");
         // check the rights of the found rule and the state
         RightSet foundRuleRights = foundRule.getRights();
         // there is probably a better way to make this sets comparison

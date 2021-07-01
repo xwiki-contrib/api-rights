@@ -43,7 +43,6 @@ import com.xpn.xwiki.internal.model.reference.CurrentMixedEntityReferenceProvide
 import com.xpn.xwiki.internal.model.reference.CurrentMixedStringDocumentReferenceResolver;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * @version $Id$
@@ -148,8 +147,8 @@ public class DefaultSecurityRuleAbacusTest extends AbstractRightsTest
     }
 
     /**
-     * Tests that if rules have both groups and users, the normalization separates groups from users,
-     * while still regrouping each subject to 1 single rule at the end
+     * Tests that if rules have both groups and users, the normalization separates groups from users, while still
+     * regrouping each subject to 1 single rule at the end
      */
     @Test
     void normalizeSubject_MixedGroupsAndUsers()
@@ -208,7 +207,7 @@ public class DefaultSecurityRuleAbacusTest extends AbstractRightsTest
         assertContainsRule(actualNormalizedRules,
             new DocumentReference("xwiki", "XWiki", "Bob"),
             false,
-            Arrays.asList( Right.EDIT, Right.COMMENT),
+            Arrays.asList(Right.EDIT, Right.COMMENT),
             RuleState.ALLOW
         );
     }
@@ -248,8 +247,8 @@ public class DefaultSecurityRuleAbacusTest extends AbstractRightsTest
     }
 
     /**
-     * Test that if a rule has the same subject than another one, but has rights that are from it but also aren't
-     * from it, we get a single rule with every rights.
+     * Test that if a rule has the same subject than another one, but has rights that are from it but also aren't from
+     * it, we get a single rule with every rights.
      */
     @Test
     void normalizeSubject_SameRulesWithMoreRights()
