@@ -22,7 +22,6 @@ package org.xwiki.contrib.rights.internal;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
-import java.util.stream.Collectors;
 
 import javax.inject.Inject;
 import javax.inject.Named;
@@ -58,49 +57,30 @@ public class DefaultRightsReader implements RightsReader
     /**
      * {@inheritDoc}
      *
-     * @see org.xwiki.contrib.rights.RightsReader#getRules(org.xwiki.model.reference.EntityReference, java.lang.Boolean)
+     * @see org.xwiki.contrib.rights.RightsReader#getRules(org.xwiki.model.reference.EntityReference, boolean)
      */
     @Override
-    public List<ReadableSecurityRule> getRules(EntityReference ref, Boolean withImplied)
+    public List<ReadableSecurityRule> getRules(EntityReference entityReference, boolean withImplied)
     {
         // TODO: see how we should handle SecurityEntryReaderExtra from DefaultSecurityEntryReader#read(ref).
-        if (withImplied) {
-            SecurityReference reference = securityReferenceFactory.newEntityReference(ref);
-            try {
-                return securityEntryReader.read(reference).getRules().stream()
-                    .filter(k -> k instanceof ReadableSecurityRule)
-                    .map(k -> (ReadableSecurityRule) k)
-                    .collect(Collectors.toList());
-            } catch (AuthorizationException e) {
-                e.printStackTrace();
-            }
-        } else {
-            return getPersistedRules(ref);
-        }
-        return new ArrayList<>();
-    }
-
-    /**
-     * {@inheritDoc}
-     *
-     * @see org.xwiki.contrib.rights.RightsReader#getPersistedRules(org.xwiki.model.reference.EntityReference)
-     */
-    @Override
-    public List<ReadableSecurityRule> getPersistedRules(EntityReference ref)
-    {
-        SecurityReference reference = securityReferenceFactory.newEntityReference(ref);
+        SecurityReference securityReference = securityReferenceFactory.newEntityReference(entityReference);
+        List<ReadableSecurityRule> rules = new ArrayList<>();
         try {
-            SecurityRuleEntry securityRuleEntry = securityEntryReader.read(reference);
+            SecurityRuleEntry securityRuleEntry = securityEntryReader.read(securityReference);
             Collection<SecurityRule> securityRules = securityRuleEntry.getRules();
-            return securityRules.stream()
-                .filter(k -> k instanceof ReadableSecurityRule)
-                .filter(k -> ((ReadableSecurityRule) k).isPersisted())
-                .map(k -> (ReadableSecurityRule) k)
-                .collect(Collectors.toList());
+            securityRules.forEach(rule -> {
+                if (!(rule instanceof ReadableSecurityRule)) {
+                    return;
+                }
+                if (!withImplied && !((ReadableSecurityRule) rule).isPersisted()) {
+                    return;
+                }
+                rules.add((ReadableSecurityRule) rule);
+            });
         } catch (AuthorizationException e) {
             e.printStackTrace();
         }
-        return new ArrayList<>();
+        return rules;
     }
 
     /**

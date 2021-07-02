@@ -81,6 +81,149 @@ public class DefaultRightsReaderTest extends AbstractRightsTest
     private DefaultSecurityReferenceFactory securityReferenceFactory;
 
     /**
+     * Test that if we have a document with no rules, we get an empty list of rules
+     */
+    @Test
+    void getRules_NoRules()
+    {
+        WikiReference testedWikiReference = new WikiReference("xwiki");
+        // return the following rules when rules are asked for the wiki
+        this.mockEntityReferenceRules(testedWikiReference, Collections.emptyList());
+        // check what gets returned for persisted rules
+        List<ReadableSecurityRule> persistedRules = this.rightsReader.getRules(testedWikiReference, false);
+        List<ReadableSecurityRule> normalizedPersistedRules = this.securityRuleAbacus.normalizeRules(persistedRules);
+        assertEquals(0, normalizedPersistedRules.size());
+        // check what gets returned for any rules
+        List<ReadableSecurityRule> rules = this.rightsReader.getRules(testedWikiReference, true);
+        List<ReadableSecurityRule> normalizedRules = this.securityRuleAbacus.normalizeRules(rules);
+        assertEquals(0, normalizedRules.size());
+    }
+
+    /**
+     * Test that if we have a document with no parent, we get every rules of that document as actual rules (normalized)
+     */
+    @Test
+    void getRules_OnlyImpliedRules()
+    {
+        WikiReference testedWikiReference = new WikiReference("xwiki");
+        // return the following rules when rules are asked for the wiki
+        this.mockEntityReferenceRules(testedWikiReference, Arrays.asList(
+            new XWikiSecurityRule(
+                new RightSet(Right.VIEW),
+                RuleState.ALLOW,
+                Arrays.asList(new DocumentReference("xwiki", "XWiki", "Admin")),
+                Collections.emptyList(),
+                false
+            )
+        ));
+        // check what gets returned for persisted rules
+        List<ReadableSecurityRule> persistedRules = this.rightsReader.getRules(testedWikiReference, false);
+        List<ReadableSecurityRule> normalizedPersistedRules = this.securityRuleAbacus.normalizeRules(persistedRules);
+        assertEquals(0, normalizedPersistedRules.size());
+        // check what gets returned for any rules
+        List<ReadableSecurityRule> rules = this.rightsReader.getRules(testedWikiReference, true);
+        List<ReadableSecurityRule> normalizedRules = this.securityRuleAbacus.normalizeRules(rules);
+        assertEquals(1, normalizedRules.size());
+        assertContainsRule(normalizedRules,
+            new DocumentReference("xwiki", "XWiki", "Admin"),
+            false,
+            Arrays.asList(Right.VIEW),
+            RuleState.ALLOW
+        );
+    }
+
+    /**
+     * Test that if we have a document with no parent, we get every rules of that document as actual rules (normalized)
+     */
+    @Test
+    void getRules_OnlyPersistedRules()
+    {
+        WikiReference testedWikiReference = new WikiReference("xwiki");
+        // return the following rules when rules are asked for the wiki
+        this.mockEntityReferenceRules(testedWikiReference, Arrays.asList(
+            new XWikiSecurityRule(
+                new RightSet(Right.VIEW),
+                RuleState.ALLOW,
+                Arrays.asList(new DocumentReference("xwiki", "XWiki", "Admin")),
+                Collections.emptyList(),
+                true
+            )
+        ));
+        // check what gets returned for persisted rules
+        List<ReadableSecurityRule> persistedRules = this.rightsReader.getRules(testedWikiReference, false);
+        List<ReadableSecurityRule> normalizedPersistedRules = this.securityRuleAbacus.normalizeRules(persistedRules);
+        assertEquals(1, normalizedPersistedRules.size());
+        assertContainsRule(normalizedPersistedRules,
+            new DocumentReference("xwiki", "XWiki", "Admin"),
+            false,
+            Arrays.asList(Right.VIEW),
+            RuleState.ALLOW
+        );
+        // check what gets returned for any rules
+        List<ReadableSecurityRule> rules = this.rightsReader.getRules(testedWikiReference, true);
+        List<ReadableSecurityRule> normalizedRules = this.securityRuleAbacus.normalizeRules(rules);
+        assertEquals(1, normalizedRules.size());
+        assertContainsRule(normalizedRules,
+            new DocumentReference("xwiki", "XWiki", "Admin"),
+            false,
+            Arrays.asList(Right.VIEW),
+            RuleState.ALLOW
+        );
+    }
+
+    /**
+     * Test that if we have a document with no parent, we get every rules of that document as actual rules (normalized)
+     */
+    @Test
+    void getRules_MixOfImpliedAndPersistedRules()
+    {
+        WikiReference testedWikiReference = new WikiReference("xwiki");
+        // return the following rules when rules are asked for the wiki
+        this.mockEntityReferenceRules(testedWikiReference, Arrays.asList(
+            new XWikiSecurityRule(
+                new RightSet(Right.VIEW),
+                RuleState.ALLOW,
+                Arrays.asList(new DocumentReference("xwiki", "XWiki", "Admin")),
+                Collections.emptyList(),
+                true
+            ),
+            new XWikiSecurityRule(
+                new RightSet(Right.EDIT),
+                RuleState.ALLOW,
+                Collections.emptyList(),
+                Arrays.asList(new DocumentReference("xwiki", "XWiki", "XWikiAdminGroup")),
+                false
+            )
+        ));
+        // check what gets returned for persisted rules
+        List<ReadableSecurityRule> persistedRules = this.rightsReader.getRules(testedWikiReference, false);
+        List<ReadableSecurityRule> normalizedPersistedRules = this.securityRuleAbacus.normalizeRules(persistedRules);
+        assertEquals(1, normalizedPersistedRules.size());
+        assertContainsRule(normalizedPersistedRules,
+            new DocumentReference("xwiki", "XWiki", "Admin"),
+            false,
+            Arrays.asList(Right.VIEW),
+            RuleState.ALLOW
+        );
+        // check what gets returned for any rules
+        List<ReadableSecurityRule> rules = this.rightsReader.getRules(testedWikiReference, true);
+        List<ReadableSecurityRule> normalizedRules = this.securityRuleAbacus.normalizeRules(rules);
+        assertEquals(2, normalizedRules.size());
+        assertContainsRule(normalizedRules,
+            new DocumentReference("xwiki", "XWiki", "Admin"),
+            false,
+            Arrays.asList(Right.VIEW),
+            RuleState.ALLOW
+        );
+        assertContainsRule(normalizedRules,
+            new DocumentReference("xwiki", "XWiki", "XWikiAdminGroup"),
+            true,
+            Arrays.asList(Right.EDIT),
+            RuleState.ALLOW
+        );
+    }
+
+    /**
      * Test that if we have a document with no parent, we get every rules of that document as actual rules (normalized)
      */
     @Test
