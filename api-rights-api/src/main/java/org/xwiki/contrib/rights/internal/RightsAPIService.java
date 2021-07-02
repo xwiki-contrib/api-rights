@@ -33,6 +33,7 @@ import org.xwiki.component.annotation.Component;
 import org.xwiki.component.manager.ComponentLookupException;
 import org.xwiki.contrib.rights.RightsReader;
 import org.xwiki.contrib.rights.RightsWriter;
+import org.xwiki.contrib.rights.SecurityRuleAbacus;
 import org.xwiki.contrib.rights.WritableSecurityRule;
 import org.xwiki.model.EntityType;
 import org.xwiki.model.reference.DocumentReference;
@@ -76,6 +77,9 @@ public class RightsAPIService implements ScriptService
 
     @Inject
     private RightsWriter rightsWriter;
+
+    @Inject
+    private SecurityRuleAbacus securityRuleAbacus;
 
     @Inject
     private AuthorizationManager authorization;
@@ -204,6 +208,17 @@ public class RightsAPIService implements ScriptService
             writableSecurityRule.setState(RuleState.DENY);
         }
         return writableSecurityRule;
+    }
+
+    /**
+     * Normalize a list of security rules to a canonical form, so that there is one and only one [user, state] per rule.
+     *
+     * @param rules The rules to normalize
+     * @return The normalized rules
+     */
+    public List<ReadableSecurityRule> normalizeRules(List<ReadableSecurityRule> rules)
+    {
+        return this.securityRuleAbacus.normalizeRules(rules);
     }
 
     private boolean userHasAccessInOrderToChangeRights(DocumentReference user, EntityReference targetEntity)
