@@ -36,19 +36,21 @@ import org.xwiki.security.authorization.ReadableSecurityRule;
 import org.xwiki.security.authorization.RightSet;
 
 /**
+ * Default implementation of the {@link org.xwiki.contrib.rights.SecurityRuleAbacus}.
+ *
  * @version $Id$
  */
 @Component
 @Singleton
 public class DefaultSecurityRuleAbacus implements SecurityRuleAbacus
 {
-
     @Inject
     private EntityReferenceSerializer<String> entityReferenceSerializer;
 
     /**
      * {@inheritDoc}
      */
+    @Override
     public List<ReadableSecurityRule> normalizeRules(List<ReadableSecurityRule> rules)
     {
         Map<String, ReadableSecurityRule> normalizedRulesMap = new HashMap<>();

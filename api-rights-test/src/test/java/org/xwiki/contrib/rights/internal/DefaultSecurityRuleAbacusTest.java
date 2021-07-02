@@ -25,23 +25,37 @@ import java.util.List;
 
 import org.junit.jupiter.api.Test;
 import org.xwiki.contrib.rights.RightsReader;
+import org.xwiki.model.internal.DefaultModelConfiguration;
+import org.xwiki.model.internal.reference.DefaultEntityReferenceProvider;
+import org.xwiki.model.internal.reference.DefaultStringEntityReferenceSerializer;
+import org.xwiki.model.internal.reference.DefaultSymbolScheme;
 import org.xwiki.model.reference.DocumentReference;
 import org.xwiki.security.authorization.ReadableSecurityRule;
 import org.xwiki.security.authorization.Right;
 import org.xwiki.security.authorization.RightSet;
 import org.xwiki.security.authorization.RuleState;
+import org.xwiki.test.annotation.ComponentList;
 import org.xwiki.test.junit5.mockito.ComponentTest;
 import org.xwiki.test.junit5.mockito.InjectMockComponents;
 import org.xwiki.test.junit5.mockito.MockComponent;
 
+import com.xpn.xwiki.internal.model.reference.CurrentMixedEntityReferenceProvider;
+import com.xpn.xwiki.internal.model.reference.CurrentMixedStringDocumentReferenceResolver;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * @version $Id$
  */
 @ComponentTest
-@DefaultRightsTestComponentList
+@ComponentList({
+    CurrentMixedStringDocumentReferenceResolver.class,
+    DefaultStringEntityReferenceSerializer.class,
+    DefaultSymbolScheme.class,
+    DefaultEntityReferenceProvider.class,
+    CurrentMixedEntityReferenceProvider.class,
+    DefaultModelConfiguration.class,
+})
 public class DefaultSecurityRuleAbacusTest extends AbstractRightsTest
 {
     @InjectMockComponents
@@ -133,8 +147,8 @@ public class DefaultSecurityRuleAbacusTest extends AbstractRightsTest
     }
 
     /**
-     * Tests that if rules have both groups and users, the normalization separates groups from users,
-     * while still regrouping each subject to 1 single rule at the end
+     * Tests that if rules have both groups and users, the normalization separates groups from users, while still
+     * regrouping each subject to 1 single rule at the end
      */
     @Test
     void normalizeSubject_MixedGroupsAndUsers()
@@ -193,7 +207,7 @@ public class DefaultSecurityRuleAbacusTest extends AbstractRightsTest
         assertContainsRule(actualNormalizedRules,
             new DocumentReference("xwiki", "XWiki", "Bob"),
             false,
-            Arrays.asList( Right.EDIT, Right.COMMENT),
+            Arrays.asList(Right.EDIT, Right.COMMENT),
             RuleState.ALLOW
         );
     }
@@ -233,8 +247,8 @@ public class DefaultSecurityRuleAbacusTest extends AbstractRightsTest
     }
 
     /**
-     * Test that if a rule has the same subject than another one, but has rights that are from it but also aren't
-     * from it, we get a single rule with every rights.
+     * Test that if a rule has the same subject than another one, but has rights that are from it but also aren't from
+     * it, we get a single rule with every rights.
      */
     @Test
     void normalizeSubject_SameRulesWithMoreRights()

@@ -20,21 +20,26 @@
 package org.xwiki.contrib.rights.internal;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
-import java.util.stream.Collectors;
 
 import javax.inject.Inject;
 import javax.inject.Named;
 import javax.inject.Singleton;
 
+import org.slf4j.Logger;
 import org.xwiki.component.annotation.Component;
 import org.xwiki.contrib.rights.RightsReader;
+import org.xwiki.contrib.rights.WritableSecurityRule;
 import org.xwiki.model.reference.EntityReference;
 import org.xwiki.security.SecurityReference;
 import org.xwiki.security.SecurityReferenceFactory;
 import org.xwiki.security.authorization.AuthorizationException;
 import org.xwiki.security.authorization.ReadableSecurityRule;
+import org.xwiki.security.authorization.RightSet;
 import org.xwiki.security.authorization.SecurityEntryReader;
+import org.xwiki.security.authorization.SecurityRule;
+import org.xwiki.security.authorization.SecurityRuleEntry;
 
 /**
  * @version $Id$
@@ -50,50 +55,37 @@ public class DefaultRightsReader implements RightsReader
     @Inject
     private SecurityReferenceFactory securityReferenceFactory;
 
-    /**
-     * {@inheritDoc}
-     *
-     * @see org.xwiki.contrib.rights.RightsReader#getRules(org.xwiki.model.reference.EntityReference, java.lang.Boolean)
-     */
-    @Override
-    public List<ReadableSecurityRule> getRules(EntityReference ref, Boolean withImplied)
-    {
-        // TODO: see how we should handle SecurityEntryReaderExtra from DefaultSecurityEntryReader#read(ref).
-        if (withImplied) {
-            SecurityReference reference = securityReferenceFactory.newEntityReference(ref);
-            try {
-                return securityEntryReader.read(reference).getRules().stream()
-                    .filter(k -> k instanceof ReadableSecurityRule)
-                    .map(k -> (ReadableSecurityRule) k)
-                    .collect(Collectors.toList());
-            } catch (AuthorizationException e) {
-                e.printStackTrace();
-            }
-        } else {
-            return getPersistedRules(ref);
-        }
-        return new ArrayList<>();
-    }
+    @Inject
+    private Logger logger;
 
     /**
      * {@inheritDoc}
      *
-     * @see org.xwiki.contrib.rights.RightsReader#getPersistedRules(org.xwiki.model.reference.EntityReference)
+     * @see org.xwiki.contrib.rights.RightsReader#getRules(org.xwiki.model.reference.EntityReference, boolean)
      */
     @Override
-    public List<ReadableSecurityRule> getPersistedRules(EntityReference ref)
+    public List<ReadableSecurityRule> getRules(EntityReference entityReference, boolean withImplied)
     {
-        SecurityReference reference = securityReferenceFactory.newEntityReference(ref);
+        // TODO: see how we should handle SecurityEntryReaderExtra from DefaultSecurityEntryReader#read(ref).
+        SecurityReference securityReference = securityReferenceFactory.newEntityReference(entityReference);
+        List<ReadableSecurityRule> rules = new ArrayList<>();
         try {
-            return securityEntryReader.read(reference).getRules().stream()
-                .filter(k -> k instanceof ReadableSecurityRule)
-                .filter(k -> ((ReadableSecurityRule) k).isPersisted())
-                .map(k -> (ReadableSecurityRule) k)
-                .collect(Collectors.toList());
+            SecurityRuleEntry securityRuleEntry = securityEntryReader.read(securityReference);
+            Collection<SecurityRule> securityRules = securityRuleEntry.getRules();
+            securityRules.forEach(rule -> {
+                if (!(rule instanceof ReadableSecurityRule)) {
+                    return;
+                }
+                if (!withImplied && !((ReadableSecurityRule) rule).isPersisted()) {
+                    return;
+                }
+                rules.add((ReadableSecurityRule) rule);
+            });
         } catch (AuthorizationException e) {
-            e.printStackTrace();
+            this.logger.error("Error, cannot read security rules from the given reference [{}]",
+                entityReference.toString(), e);
         }
-        return new ArrayList<>();
+        return rules;
     }
 
     /**
@@ -102,9 +94,43 @@ public class DefaultRightsReader implements RightsReader
      * @see org.xwiki.contrib.rights.RightsReader#getActualRules(org.xwiki.model.reference.EntityReference)
      */
     @Override
-    public List<ReadableSecurityRule> getActualRules(EntityReference ref)
+    public List<ReadableSecurityRule> getActualRules(EntityReference entityReference)
     {
-        // TODO Auto-generated method stub
-        return null;
+        // Create a set containing rights that were explicitly encountered going up the parent tree
+        // It will be updated based on what is found when looking at parent pages
+        RightSet encounteredExplicitRights = new RightSet();
+        // The list of all the actual (current + inherited) rules of the page
+        List<ReadableSecurityRule> actualRules = new ArrayList<>();
+
+        // Go up the parent tree to get actual rules
+        SecurityReference securityReference = securityReferenceFactory.newEntityReference(entityReference);
+
+        do {
+            List<ReadableSecurityRule> inheritedPageRules = this.getRules(securityReference, false);
+            // We need to treat every groups and users on the page before flagging the rights as inherited
+            // So we keep track of which rights are explicitly set on this parent page to remove them afterwards
+            RightSet toBeAddedExplicitRights = new RightSet();
+            // Inspect rules right by right to not miss any explicit right
+            inheritedPageRules.forEach(rule -> {
+                rule.getRights().forEach(right -> {
+                    // If the right was already set explicitly down the document tree, skip
+                    if (encounteredExplicitRights.contains(right)) {
+                        return;
+                    }
+                    // Else, this is an actual right for the current page
+                    WritableSecurityRule toBeAddedSecurityRule = new WritableSecurityRuleImpl(rule);
+                    toBeAddedSecurityRule.setRights(new RightSet(right));
+                    actualRules.add(toBeAddedSecurityRule);
+                    toBeAddedExplicitRights.add(right);
+                });
+            });
+
+            // Add every rights we explicitly encountered on the page
+            encounteredExplicitRights.addAll(toBeAddedExplicitRights);
+            // Go to the parent security reference (parent space or main wiki)
+            securityReference = securityReference.getParentSecurityReference();
+        } while (securityReference != null);
+
+        return actualRules;
     }
 }

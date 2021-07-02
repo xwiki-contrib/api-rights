@@ -25,16 +25,16 @@ import org.xwiki.component.annotation.Role;
 import org.xwiki.security.authorization.ReadableSecurityRule;
 
 /**
+ * The security abacus provides functions in order to perform various operations on security rules.
+ *
  * @version $Id$
  * @since 1.1
  */
 @Role
 public interface SecurityRuleAbacus
 {
-
     /**
-     * Normalize given rules so that it is easier to use.
-     * The normalization will ensure that:
+     * Normalize given rules so that it is easier to use. The normalization will ensure that:
      * <ul>
      * <li>there is only one [subject, state] per rule</li>
      * <li>there is only one rule per [subject, state]</li>

@@ -82,5 +82,6 @@
   <modules>
     <module>api-rights-api</module>
     <module>api-rights-bridge</module>
+    <module>api-rights-test</module>
   </modules>
 </project>
