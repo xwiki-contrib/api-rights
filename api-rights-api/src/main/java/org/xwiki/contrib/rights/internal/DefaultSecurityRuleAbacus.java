@@ -36,7 +36,7 @@ import org.xwiki.security.authorization.ReadableSecurityRule;
 import org.xwiki.security.authorization.RightSet;
 
 /**
- * {@inheritDoc}
+ * Default implementation of the {@link org.xwiki.contrib.rights.SecurityRuleAbacus}.
  *
  * @version $Id$
  */

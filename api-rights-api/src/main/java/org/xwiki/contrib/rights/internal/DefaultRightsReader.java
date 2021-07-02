@@ -27,6 +27,7 @@ import javax.inject.Inject;
 import javax.inject.Named;
 import javax.inject.Singleton;
 
+import org.slf4j.Logger;
 import org.xwiki.component.annotation.Component;
 import org.xwiki.contrib.rights.RightsReader;
 import org.xwiki.contrib.rights.WritableSecurityRule;
@@ -54,6 +55,9 @@ public class DefaultRightsReader implements RightsReader
     @Inject
     private SecurityReferenceFactory securityReferenceFactory;
 
+    @Inject
+    private Logger logger;
+
     /**
      * {@inheritDoc}
      *
@@ -78,7 +82,8 @@ public class DefaultRightsReader implements RightsReader
                 rules.add((ReadableSecurityRule) rule);
             });
         } catch (AuthorizationException e) {
-            e.printStackTrace();
+            this.logger.error("Error, cannot read security rules from the given reference [{}]",
+                entityReference.toString(), e);
         }
         return rules;
     }
