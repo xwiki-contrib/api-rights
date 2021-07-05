@@ -81,7 +81,7 @@ public class DefaultSecurityRuleAbacusTest extends AbstractRightsTest
             RuleState.ALLOW
         ));
         // normalize the rules above
-        List<ReadableSecurityRule> actualNormalizedRules = this.securityRuleAbacus.normalizeRules(rulesToNormalize);
+        List<ReadableSecurityRule> actualNormalizedRules = this.securityRuleAbacus.normalizeRulesBySubject(rulesToNormalize);
         // test the result. Count first...
         assertEquals(2, actualNormalizedRules.size());
         // ... and actual rules after
@@ -126,7 +126,7 @@ public class DefaultSecurityRuleAbacusTest extends AbstractRightsTest
             )
         );
         // normalize the rules above
-        List<ReadableSecurityRule> actualNormalizedRules = this.securityRuleAbacus.normalizeRules(rulesToNormalize);
+        List<ReadableSecurityRule> actualNormalizedRules = this.securityRuleAbacus.normalizeRulesBySubject(rulesToNormalize);
         // test the result. Count first...
         assertEquals(2, actualNormalizedRules.size());
         // ... and actual rules after
@@ -178,7 +178,7 @@ public class DefaultSecurityRuleAbacusTest extends AbstractRightsTest
             )
         );
         // normalize the rules above
-        List<ReadableSecurityRule> actualNormalizedRules = this.securityRuleAbacus.normalizeRules(rulesToNormalize);
+        List<ReadableSecurityRule> actualNormalizedRules = this.securityRuleAbacus.normalizeRulesBySubject(rulesToNormalize);
         // test the result. Count first...
         assertEquals(4, actualNormalizedRules.size());
         // ... and actual rules after
@@ -233,7 +233,7 @@ public class DefaultSecurityRuleAbacusTest extends AbstractRightsTest
             )
         );
         // normalize the rules above
-        List<ReadableSecurityRule> actualNormalizedRules = this.securityRuleAbacus.normalizeRules(rulesToNormalize);
+        List<ReadableSecurityRule> actualNormalizedRules = this.securityRuleAbacus.normalizeRulesBySubject(rulesToNormalize);
         // test the result. Count first...
         assertEquals(1, actualNormalizedRules.size());
         // ... and actual rules after
@@ -268,7 +268,7 @@ public class DefaultSecurityRuleAbacusTest extends AbstractRightsTest
             )
         );
         // normalize the rules above
-        List<ReadableSecurityRule> actualNormalizedRules = this.securityRuleAbacus.normalizeRules(rulesToNormalize);
+        List<ReadableSecurityRule> actualNormalizedRules = this.securityRuleAbacus.normalizeRulesBySubject(rulesToNormalize);
         // test the result. Count first...
         assertEquals(1, actualNormalizedRules.size());
         // ... and actual rules after
@@ -308,7 +308,7 @@ public class DefaultSecurityRuleAbacusTest extends AbstractRightsTest
             )
         );
         // normalize the rules above
-        List<ReadableSecurityRule> actualNormalizedRules = this.securityRuleAbacus.normalizeRules(rulesToNormalize);
+        List<ReadableSecurityRule> actualNormalizedRules = this.securityRuleAbacus.normalizeRulesBySubject(rulesToNormalize);
         // test the result. Count first...
         assertEquals(3, actualNormalizedRules.size());
         // ... and actual rules after
@@ -343,7 +343,7 @@ public class DefaultSecurityRuleAbacusTest extends AbstractRightsTest
     {
         List<ReadableSecurityRule> rulesToNormalize = Collections.emptyList();
         // normalize the rules above
-        List<ReadableSecurityRule> actualNormalizedRules = this.securityRuleAbacus.normalizeRules(rulesToNormalize);
+        List<ReadableSecurityRule> actualNormalizedRules = this.securityRuleAbacus.normalizeRulesBySubject(rulesToNormalize);
         // test the result. Count first...
         assertEquals(0, actualNormalizedRules.size());
     }
@@ -363,7 +363,7 @@ public class DefaultSecurityRuleAbacusTest extends AbstractRightsTest
             )
         );
         // normalize the rules above
-        List<ReadableSecurityRule> actualNormalizedRules = this.securityRuleAbacus.normalizeRules(rulesToNormalize);
+        List<ReadableSecurityRule> actualNormalizedRules = this.securityRuleAbacus.normalizeRulesBySubject(rulesToNormalize);
         // test the result. Count first...
         assertEquals(0, actualNormalizedRules.size());
     }
@@ -395,7 +395,7 @@ public class DefaultSecurityRuleAbacusTest extends AbstractRightsTest
             );
         List<ReadableSecurityRule> rulesToNormalize = Arrays.asList(ruleAllow, ruleDeny);
         // normalize the rules above
-        List<ReadableSecurityRule> actualNormalizedRules = this.securityRuleAbacus.normalizeRules(rulesToNormalize);
+        List<ReadableSecurityRule> actualNormalizedRules = this.securityRuleAbacus.normalizeRulesBySubject(rulesToNormalize);
         // test the result. Count first...
         assertEquals(2, actualNormalizedRules.size());
         assertContainsRule(actualNormalizedRules,

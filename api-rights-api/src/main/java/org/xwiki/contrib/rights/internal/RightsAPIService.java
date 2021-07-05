@@ -216,9 +216,9 @@ public class RightsAPIService implements ScriptService
      * @param rules The rules to normalize
      * @return The normalized rules
      */
-    public List<ReadableSecurityRule> normalizeRules(List<ReadableSecurityRule> rules)
+    public List<ReadableSecurityRule> normalizeRulesBySubject(List<ReadableSecurityRule> rules)
     {
-        return this.securityRuleAbacus.normalizeRules(rules);
+        return this.securityRuleAbacus.normalizeRulesBySubject(rules);
     }
 
     private boolean userHasAccessInOrderToChangeRights(DocumentReference user, EntityReference targetEntity)

@@ -43,5 +43,5 @@ public interface SecurityRuleAbacus
      * @param rules A list of rules
      * @return The normalized list of rules
      */
-    List<ReadableSecurityRule> normalizeRules(List<ReadableSecurityRule> rules);
+    List<ReadableSecurityRule> normalizeRulesBySubject(List<ReadableSecurityRule> rules);
 }

@@ -51,7 +51,7 @@ public class DefaultSecurityRuleAbacus implements SecurityRuleAbacus
      * {@inheritDoc}
      */
     @Override
-    public List<ReadableSecurityRule> normalizeRules(List<ReadableSecurityRule> rules)
+    public List<ReadableSecurityRule> normalizeRulesBySubject(List<ReadableSecurityRule> rules)
     {
         Map<String, ReadableSecurityRule> normalizedRulesMap = new HashMap<>();
 
