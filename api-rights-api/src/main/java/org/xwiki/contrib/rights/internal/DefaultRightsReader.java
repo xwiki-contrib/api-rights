@@ -27,7 +27,6 @@ import javax.inject.Inject;
 import javax.inject.Named;
 import javax.inject.Singleton;
 
-import org.slf4j.Logger;
 import org.xwiki.component.annotation.Component;
 import org.xwiki.contrib.rights.RightsReader;
 import org.xwiki.contrib.rights.WritableSecurityRule;
@@ -36,7 +35,9 @@ import org.xwiki.security.SecurityReference;
 import org.xwiki.security.SecurityReferenceFactory;
 import org.xwiki.security.authorization.AuthorizationException;
 import org.xwiki.security.authorization.ReadableSecurityRule;
+import org.xwiki.security.authorization.Right;
 import org.xwiki.security.authorization.RightSet;
+import org.xwiki.security.authorization.RuleState;
 import org.xwiki.security.authorization.SecurityEntryReader;
 import org.xwiki.security.authorization.SecurityRule;
 import org.xwiki.security.authorization.SecurityRuleEntry;
@@ -54,9 +55,6 @@ public class DefaultRightsReader implements RightsReader
 
     @Inject
     private SecurityReferenceFactory securityReferenceFactory;
-
-    @Inject
-    private Logger logger;
 
     /**
      * {@inheritDoc}
@@ -107,19 +105,22 @@ public class DefaultRightsReader implements RightsReader
             // So we keep track of which rights are explicitly set on this parent page to remove them afterwards
             RightSet toBeAddedExplicitRights = new RightSet();
             // Inspect rules right by right to not miss any explicit right
-            inheritedPageRules.forEach(rule -> {
-                rule.getRights().forEach(right -> {
+            for (ReadableSecurityRule rule : inheritedPageRules) {
+                if (rule.getState() != RuleState.ALLOW) {
+                    throw new AuthorizationException("Error: getActualRules does not support deny rights");
+                }
+                for (Right right : rule.getRights()) {
                     // If the right was already set explicitly down the document tree, skip
                     if (encounteredExplicitRights.contains(right)) {
-                        return;
+                        continue;
                     }
                     // Else, this is an actual right for the current page
                     WritableSecurityRule toBeAddedSecurityRule = new WritableSecurityRuleImpl(rule);
                     toBeAddedSecurityRule.setRights(new RightSet(right));
                     actualRules.add(toBeAddedSecurityRule);
                     toBeAddedExplicitRights.add(right);
-                });
-            });
+                }
+            }
 
             // Add every rights we explicitly encountered on the page
             encounteredExplicitRights.addAll(toBeAddedExplicitRights);

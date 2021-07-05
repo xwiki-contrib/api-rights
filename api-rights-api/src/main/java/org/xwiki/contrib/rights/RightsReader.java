@@ -51,7 +51,7 @@ public interface RightsReader
      *
      * @param entityReference the reference on which to check rules
      * @return the list of security rules that apply to the passed entity (including inherited and implied rules)
-     * @throws AuthorizationException on error.
+     * @throws AuthorizationException on error, and when deny rights are encountered.
      */
     List<ReadableSecurityRule> getActualRules(EntityReference entityReference) throws AuthorizationException;
 }
