@@ -23,6 +23,7 @@ import java.util.List;
 
 import org.xwiki.component.annotation.Role;
 import org.xwiki.model.reference.EntityReference;
+import org.xwiki.security.authorization.AuthorizationException;
 import org.xwiki.security.authorization.ReadableSecurityRule;
 import org.xwiki.stability.Unstable;
 
@@ -40,14 +41,17 @@ public interface RightsReader
      * @param entityReference the entity reference to get the rules for
      * @param withImplied whether implied rules should also be returned or only persisted rules.
      * @return the list of security rules that apply to the passed entity
+     * @throws AuthorizationException on error.
      */
-    List<ReadableSecurityRule> getRules(EntityReference entityReference, boolean withImplied);
+    List<ReadableSecurityRule> getRules(EntityReference entityReference, boolean withImplied)
+        throws AuthorizationException;
 
     /**
      * Gets the rules that apply to the passed entity reference, including the inherited and implied rules.
      *
      * @param entityReference the reference on which to check rules
      * @return the list of security rules that apply to the passed entity (including inherited and implied rules)
+     * @throws AuthorizationException on error.
      */
-    List<ReadableSecurityRule> getActualRules(EntityReference entityReference);
+    List<ReadableSecurityRule> getActualRules(EntityReference entityReference) throws AuthorizationException;
 }

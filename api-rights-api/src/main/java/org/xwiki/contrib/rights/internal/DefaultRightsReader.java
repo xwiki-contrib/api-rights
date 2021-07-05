@@ -65,26 +65,22 @@ public class DefaultRightsReader implements RightsReader
      */
     @Override
     public List<ReadableSecurityRule> getRules(EntityReference entityReference, boolean withImplied)
+        throws AuthorizationException
     {
         // TODO: see how we should handle SecurityEntryReaderExtra from DefaultSecurityEntryReader#read(ref).
         SecurityReference securityReference = securityReferenceFactory.newEntityReference(entityReference);
         List<ReadableSecurityRule> rules = new ArrayList<>();
-        try {
-            SecurityRuleEntry securityRuleEntry = securityEntryReader.read(securityReference);
-            Collection<SecurityRule> securityRules = securityRuleEntry.getRules();
-            securityRules.forEach(rule -> {
-                if (!(rule instanceof ReadableSecurityRule)) {
-                    return;
-                }
-                if (!withImplied && !((ReadableSecurityRule) rule).isPersisted()) {
-                    return;
-                }
-                rules.add((ReadableSecurityRule) rule);
-            });
-        } catch (AuthorizationException e) {
-            this.logger.error("Error, cannot read security rules from the given reference [{}]",
-                entityReference.toString(), e);
-        }
+        SecurityRuleEntry securityRuleEntry = securityEntryReader.read(securityReference);
+        Collection<SecurityRule> securityRules = securityRuleEntry.getRules();
+        securityRules.forEach(rule -> {
+            if (!(rule instanceof ReadableSecurityRule)) {
+                return;
+            }
+            if (!withImplied && !((ReadableSecurityRule) rule).isPersisted()) {
+                return;
+            }
+            rules.add((ReadableSecurityRule) rule);
+        });
         return rules;
     }
 
@@ -94,7 +90,7 @@ public class DefaultRightsReader implements RightsReader
      * @see org.xwiki.contrib.rights.RightsReader#getActualRules(org.xwiki.model.reference.EntityReference)
      */
     @Override
-    public List<ReadableSecurityRule> getActualRules(EntityReference entityReference)
+    public List<ReadableSecurityRule> getActualRules(EntityReference entityReference) throws AuthorizationException
     {
         // Create a set containing rights that were explicitly encountered going up the parent tree
         // It will be updated based on what is found when looking at parent pages

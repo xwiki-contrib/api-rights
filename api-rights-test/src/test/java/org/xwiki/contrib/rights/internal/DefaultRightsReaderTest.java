@@ -84,14 +84,15 @@ public class DefaultRightsReaderTest extends AbstractRightsTest
      * Test that if we have a document with no rules, we get an empty list of rules
      */
     @Test
-    void getRules_NoRules()
+    void getRules_NoRules() throws Exception
     {
         WikiReference testedWikiReference = new WikiReference("xwiki");
         // return the following rules when rules are asked for the wiki
         this.mockEntityReferenceRules(testedWikiReference, Collections.emptyList());
         // check what gets returned for persisted rules
         List<ReadableSecurityRule> persistedRules = this.rightsReader.getRules(testedWikiReference, false);
-        List<ReadableSecurityRule> normalizedPersistedRules = this.securityRuleAbacus.normalizeRulesBySubject(persistedRules);
+        List<ReadableSecurityRule> normalizedPersistedRules =
+            this.securityRuleAbacus.normalizeRulesBySubject(persistedRules);
         assertEquals(0, normalizedPersistedRules.size());
         // check what gets returned for any rules
         List<ReadableSecurityRule> rules = this.rightsReader.getRules(testedWikiReference, true);
@@ -103,7 +104,7 @@ public class DefaultRightsReaderTest extends AbstractRightsTest
      * Test that if we have a document with no parent, we get every rules of that document as actual rules (normalized)
      */
     @Test
-    void getRules_OnlyImpliedRules()
+    void getRules_OnlyImpliedRules() throws Exception
     {
         WikiReference testedWikiReference = new WikiReference("xwiki");
         // return the following rules when rules are asked for the wiki
@@ -118,7 +119,8 @@ public class DefaultRightsReaderTest extends AbstractRightsTest
         ));
         // check what gets returned for persisted rules
         List<ReadableSecurityRule> persistedRules = this.rightsReader.getRules(testedWikiReference, false);
-        List<ReadableSecurityRule> normalizedPersistedRules = this.securityRuleAbacus.normalizeRulesBySubject(persistedRules);
+        List<ReadableSecurityRule> normalizedPersistedRules =
+            this.securityRuleAbacus.normalizeRulesBySubject(persistedRules);
         assertEquals(0, normalizedPersistedRules.size());
         // check what gets returned for any rules
         List<ReadableSecurityRule> rules = this.rightsReader.getRules(testedWikiReference, true);
@@ -136,7 +138,7 @@ public class DefaultRightsReaderTest extends AbstractRightsTest
      * Test that if we have a document with no parent, we get every rules of that document as actual rules (normalized)
      */
     @Test
-    void getRules_OnlyPersistedRules()
+    void getRules_OnlyPersistedRules() throws Exception
     {
         WikiReference testedWikiReference = new WikiReference("xwiki");
         // return the following rules when rules are asked for the wiki
@@ -151,7 +153,8 @@ public class DefaultRightsReaderTest extends AbstractRightsTest
         ));
         // check what gets returned for persisted rules
         List<ReadableSecurityRule> persistedRules = this.rightsReader.getRules(testedWikiReference, false);
-        List<ReadableSecurityRule> normalizedPersistedRules = this.securityRuleAbacus.normalizeRulesBySubject(persistedRules);
+        List<ReadableSecurityRule> normalizedPersistedRules =
+            this.securityRuleAbacus.normalizeRulesBySubject(persistedRules);
         assertEquals(1, normalizedPersistedRules.size());
         assertContainsRule(normalizedPersistedRules,
             new DocumentReference("xwiki", "XWiki", "Admin"),
@@ -175,7 +178,7 @@ public class DefaultRightsReaderTest extends AbstractRightsTest
      * Test that if we have a document with no parent, we get every rules of that document as actual rules (normalized)
      */
     @Test
-    void getRules_MixOfImpliedAndPersistedRules()
+    void getRules_MixOfImpliedAndPersistedRules() throws Exception
     {
         WikiReference testedWikiReference = new WikiReference("xwiki");
         // return the following rules when rules are asked for the wiki
@@ -197,7 +200,8 @@ public class DefaultRightsReaderTest extends AbstractRightsTest
         ));
         // check what gets returned for persisted rules
         List<ReadableSecurityRule> persistedRules = this.rightsReader.getRules(testedWikiReference, false);
-        List<ReadableSecurityRule> normalizedPersistedRules = this.securityRuleAbacus.normalizeRulesBySubject(persistedRules);
+        List<ReadableSecurityRule> normalizedPersistedRules =
+            this.securityRuleAbacus.normalizeRulesBySubject(persistedRules);
         assertEquals(1, normalizedPersistedRules.size());
         assertContainsRule(normalizedPersistedRules,
             new DocumentReference("xwiki", "XWiki", "Admin"),
@@ -227,7 +231,7 @@ public class DefaultRightsReaderTest extends AbstractRightsTest
      * Test that if we have a document with no parent, we get every rules of that document as actual rules (normalized)
      */
     @Test
-    void getActualRules_Wiki()
+    void getActualRules_Wiki() throws Exception
     {
         WikiReference testedWikiReference = new WikiReference("xwiki");
         // return the following rules when rules are asked for the wiki
@@ -242,7 +246,8 @@ public class DefaultRightsReaderTest extends AbstractRightsTest
         ));
         // check what gets returned
         List<ReadableSecurityRule> inheritedRules = this.rightsReader.getActualRules(testedWikiReference);
-        List<ReadableSecurityRule> normalizedInheritedRules = this.securityRuleAbacus.normalizeRulesBySubject(inheritedRules);
+        List<ReadableSecurityRule> normalizedInheritedRules =
+            this.securityRuleAbacus.normalizeRulesBySubject(inheritedRules);
         assertEquals(1, normalizedInheritedRules.size());
         assertContainsRule(normalizedInheritedRules,
             new DocumentReference("xwiki", "XWiki", "Admin"),
@@ -257,7 +262,7 @@ public class DefaultRightsReaderTest extends AbstractRightsTest
      * actual rights
      */
     @Test
-    void getActualRules_Space_WikiNoRules()
+    void getActualRules_Space_WikiNoRules() throws Exception
     {
         WikiReference testedWikiReference = new WikiReference("xwiki");
         SpaceReference testedSpaceReference = new SpaceReference("SP1", testedWikiReference);
@@ -275,7 +280,8 @@ public class DefaultRightsReaderTest extends AbstractRightsTest
         );
         // check what gets returned
         List<ReadableSecurityRule> inheritedRules = this.rightsReader.getActualRules(testedSpaceReference);
-        List<ReadableSecurityRule> normalizedInheritedRules = this.securityRuleAbacus.normalizeRulesBySubject(inheritedRules);
+        List<ReadableSecurityRule> normalizedInheritedRules =
+            this.securityRuleAbacus.normalizeRulesBySubject(inheritedRules);
         assertEquals(1, normalizedInheritedRules.size());
         assertContainsRule(normalizedInheritedRules,
             new DocumentReference("xwiki", "XWiki", "Admin"),
@@ -289,7 +295,7 @@ public class DefaultRightsReaderTest extends AbstractRightsTest
      * Test that if the current document does not have any rules, the parent rules are going to be used
      */
     @Test
-    void getActualRules_SpaceNoRules_Wiki()
+    void getActualRules_SpaceNoRules_Wiki() throws Exception
     {
         WikiReference testedWikiReference = new WikiReference("xwiki");
         SpaceReference testedSpaceReference = new SpaceReference("SP1", testedWikiReference);
@@ -307,7 +313,8 @@ public class DefaultRightsReaderTest extends AbstractRightsTest
         this.mockEntityReferenceRules(testedSpaceReference, Collections.emptyList());
         // check what gets returned
         List<ReadableSecurityRule> inheritedRules = this.rightsReader.getActualRules(testedSpaceReference);
-        List<ReadableSecurityRule> normalizedInheritedRules = this.securityRuleAbacus.normalizeRulesBySubject(inheritedRules);
+        List<ReadableSecurityRule> normalizedInheritedRules =
+            this.securityRuleAbacus.normalizeRulesBySubject(inheritedRules);
         assertEquals(1, normalizedInheritedRules.size());
         assertContainsRule(normalizedInheritedRules,
             new DocumentReference("xwiki", "XWiki", "Admin"),
@@ -322,7 +329,7 @@ public class DefaultRightsReaderTest extends AbstractRightsTest
      * added to the actual rights (and are normalized)
      */
     @Test
-    void getActualRules_Space_WikiDifferentSubjectDifferentRight()
+    void getActualRules_Space_WikiDifferentSubjectDifferentRight() throws Exception
     {
         WikiReference testedWikiReference = new WikiReference("xwiki");
         SpaceReference testedSpaceReference = new SpaceReference("SP1", testedWikiReference);
@@ -348,7 +355,8 @@ public class DefaultRightsReaderTest extends AbstractRightsTest
         );
         // check what gets returned
         List<ReadableSecurityRule> inheritedRules = this.rightsReader.getActualRules(testedSpaceReference);
-        List<ReadableSecurityRule> normalizedInheritedRules = this.securityRuleAbacus.normalizeRulesBySubject(inheritedRules);
+        List<ReadableSecurityRule> normalizedInheritedRules =
+            this.securityRuleAbacus.normalizeRulesBySubject(inheritedRules);
         assertEquals(2, normalizedInheritedRules.size());
         assertContainsRule(normalizedInheritedRules,
             new DocumentReference("xwiki", "XWiki", "XWikiAdminGroup"),
@@ -368,7 +376,7 @@ public class DefaultRightsReaderTest extends AbstractRightsTest
      * Test that if a parent document has the exact same rules than its child, the rules are only added once
      */
     @Test
-    void getActualRules_Space_WikiSameRule()
+    void getActualRules_Space_WikiSameRule() throws Exception
     {
         WikiReference testedWikiReference = new WikiReference("xwiki");
         SpaceReference testedSpaceReference = new SpaceReference("SP1", testedWikiReference);
@@ -394,7 +402,8 @@ public class DefaultRightsReaderTest extends AbstractRightsTest
         );
         // check what gets returned
         List<ReadableSecurityRule> inheritedRules = this.rightsReader.getActualRules(testedSpaceReference);
-        List<ReadableSecurityRule> normalizedInheritedRules = this.securityRuleAbacus.normalizeRulesBySubject(inheritedRules);
+        List<ReadableSecurityRule> normalizedInheritedRules =
+            this.securityRuleAbacus.normalizeRulesBySubject(inheritedRules);
         assertEquals(1, normalizedInheritedRules.size());
         assertContainsRule(normalizedInheritedRules,
             new DocumentReference("xwiki", "XWiki", "XWikiAdminGroup"),
@@ -409,7 +418,7 @@ public class DefaultRightsReaderTest extends AbstractRightsTest
      * are added to the actual rights
      */
     @Test
-    void getActualRules_Space_WikiSameSubjectDifferentRight()
+    void getActualRules_Space_WikiSameSubjectDifferentRight() throws Exception
     {
         WikiReference testedWikiReference = new WikiReference("xwiki");
         SpaceReference testedSpaceReference = new SpaceReference("SP1", testedWikiReference);
@@ -435,7 +444,8 @@ public class DefaultRightsReaderTest extends AbstractRightsTest
         );
         // check what gets returned
         List<ReadableSecurityRule> inheritedRules = this.rightsReader.getActualRules(testedSpaceReference);
-        List<ReadableSecurityRule> normalizedInheritedRules = this.securityRuleAbacus.normalizeRulesBySubject(inheritedRules);
+        List<ReadableSecurityRule> normalizedInheritedRules =
+            this.securityRuleAbacus.normalizeRulesBySubject(inheritedRules);
         assertEquals(1, normalizedInheritedRules.size());
         // The two rules should have merge to 1 with both VIEW and EDIT rights
         assertContainsRule(normalizedInheritedRules,
@@ -451,7 +461,7 @@ public class DefaultRightsReaderTest extends AbstractRightsTest
      * subjects are ignored from the actual rights (because overridden)
      */
     @Test
-    void getActualRules_Space_WikiDifferentSubjectSameRight()
+    void getActualRules_Space_WikiDifferentSubjectSameRight() throws Exception
     {
         WikiReference testedWikiReference = new WikiReference("xwiki");
         SpaceReference testedSpaceReference = new SpaceReference("SP1", testedWikiReference);
@@ -477,7 +487,8 @@ public class DefaultRightsReaderTest extends AbstractRightsTest
         );
         // check what gets returned
         List<ReadableSecurityRule> inheritedRules = this.rightsReader.getActualRules(testedSpaceReference);
-        List<ReadableSecurityRule> normalizedInheritedRules = this.securityRuleAbacus.normalizeRulesBySubject(inheritedRules);
+        List<ReadableSecurityRule> normalizedInheritedRules =
+            this.securityRuleAbacus.normalizeRulesBySubject(inheritedRules);
         assertEquals(1, normalizedInheritedRules.size());
         assertContainsRule(normalizedInheritedRules,
             new DocumentReference("xwiki", "XWiki", "Admin"),
@@ -492,7 +503,7 @@ public class DefaultRightsReaderTest extends AbstractRightsTest
      * added too in the actual rights of the page
      */
     @Test
-    void getActualRules_Space_WikiSameSubjectMoreRights()
+    void getActualRules_Space_WikiSameSubjectMoreRights() throws Exception
     {
         WikiReference testedWikiReference = new WikiReference("xwiki");
         SpaceReference testedSpaceReference = new SpaceReference("SP1", testedWikiReference);
@@ -518,7 +529,8 @@ public class DefaultRightsReaderTest extends AbstractRightsTest
         );
         // check what gets returned
         List<ReadableSecurityRule> inheritedRules = this.rightsReader.getActualRules(testedSpaceReference);
-        List<ReadableSecurityRule> normalizedInheritedRules = this.securityRuleAbacus.normalizeRulesBySubject(inheritedRules);
+        List<ReadableSecurityRule> normalizedInheritedRules =
+            this.securityRuleAbacus.normalizeRulesBySubject(inheritedRules);
         assertEquals(1, normalizedInheritedRules.size());
         assertContainsRule(normalizedInheritedRules,
             new DocumentReference("xwiki", "XWiki", "XWikiAdminGroup"),
@@ -533,7 +545,7 @@ public class DefaultRightsReaderTest extends AbstractRightsTest
      * different subject, the subject does not get ignored for the extra rights it has
      */
     @Test
-    void getActualRules_Space_WikiDifferentSubjectMoreRights()
+    void getActualRules_Space_WikiDifferentSubjectMoreRights() throws Exception
     {
         WikiReference testedWikiReference = new WikiReference("xwiki");
         SpaceReference testedSpaceReference = new SpaceReference("SP1", testedWikiReference);
@@ -559,7 +571,8 @@ public class DefaultRightsReaderTest extends AbstractRightsTest
         );
         // check what gets returned
         List<ReadableSecurityRule> inheritedRules = this.rightsReader.getActualRules(testedSpaceReference);
-        List<ReadableSecurityRule> normalizedInheritedRules = this.securityRuleAbacus.normalizeRulesBySubject(inheritedRules);
+        List<ReadableSecurityRule> normalizedInheritedRules =
+            this.securityRuleAbacus.normalizeRulesBySubject(inheritedRules);
         assertEquals(2, normalizedInheritedRules.size());
         assertContainsRule(normalizedInheritedRules,
             new DocumentReference("xwiki", "XWiki", "XWikiAdminGroup"),
@@ -580,7 +593,7 @@ public class DefaultRightsReaderTest extends AbstractRightsTest
      * rules will have both rights
      */
     @Test
-    void getActualRules_Space_WikiMoreSubjectsDifferentRight()
+    void getActualRules_Space_WikiMoreSubjectsDifferentRight() throws Exception
     {
         WikiReference testedWikiReference = new WikiReference("xwiki");
         SpaceReference testedSpaceReference = new SpaceReference("SP1", testedWikiReference);
@@ -606,7 +619,8 @@ public class DefaultRightsReaderTest extends AbstractRightsTest
         );
         // check what gets returned
         List<ReadableSecurityRule> inheritedRules = this.rightsReader.getActualRules(testedSpaceReference);
-        List<ReadableSecurityRule> normalizedInheritedRules = this.securityRuleAbacus.normalizeRulesBySubject(inheritedRules);
+        List<ReadableSecurityRule> normalizedInheritedRules =
+            this.securityRuleAbacus.normalizeRulesBySubject(inheritedRules);
         assertEquals(2, normalizedInheritedRules.size());
         assertContainsRule(normalizedInheritedRules,
             new DocumentReference("xwiki", "XWiki", "XWikiAdminGroup"),
@@ -627,7 +641,7 @@ public class DefaultRightsReaderTest extends AbstractRightsTest
      * rule will have the right
      */
     @Test
-    void getActualRules_Space_WikiMoreSubjectsSameRight()
+    void getActualRules_Space_WikiMoreSubjectsSameRight() throws Exception
     {
         WikiReference testedWikiReference = new WikiReference("xwiki");
         SpaceReference testedSpaceReference = new SpaceReference("SP1", testedWikiReference);
@@ -653,7 +667,8 @@ public class DefaultRightsReaderTest extends AbstractRightsTest
         );
         // check what gets returned
         List<ReadableSecurityRule> inheritedRules = this.rightsReader.getActualRules(testedSpaceReference);
-        List<ReadableSecurityRule> normalizedInheritedRules = this.securityRuleAbacus.normalizeRulesBySubject(inheritedRules);
+        List<ReadableSecurityRule> normalizedInheritedRules =
+            this.securityRuleAbacus.normalizeRulesBySubject(inheritedRules);
         assertEquals(1, normalizedInheritedRules.size());
         assertContainsRule(normalizedInheritedRules,
             new DocumentReference("xwiki", "XWiki", "XWikiAdminGroup"),
@@ -668,7 +683,7 @@ public class DefaultRightsReaderTest extends AbstractRightsTest
      * children rule will have the right
      */
     @Test
-    void getActualRules_Space_WikiDifferentSubjectsSameRight()
+    void getActualRules_Space_WikiDifferentSubjectsSameRight() throws Exception
     {
         WikiReference testedWikiReference = new WikiReference("xwiki");
         SpaceReference testedSpaceReference = new SpaceReference("SP1", testedWikiReference);
@@ -694,7 +709,8 @@ public class DefaultRightsReaderTest extends AbstractRightsTest
         );
         // check what gets returned
         List<ReadableSecurityRule> inheritedRules = this.rightsReader.getActualRules(testedSpaceReference);
-        List<ReadableSecurityRule> normalizedInheritedRules = this.securityRuleAbacus.normalizeRulesBySubject(inheritedRules);
+        List<ReadableSecurityRule> normalizedInheritedRules =
+            this.securityRuleAbacus.normalizeRulesBySubject(inheritedRules);
         assertEquals(1, normalizedInheritedRules.size());
         assertContainsRule(normalizedInheritedRules,
             new DocumentReference("xwiki", "XWiki", "Bob"),
@@ -709,7 +725,7 @@ public class DefaultRightsReaderTest extends AbstractRightsTest
      * be used
      */
     @Test
-    void getActualRules_PageNoRule_SpaceNoRule_Wiki()
+    void getActualRules_PageNoRule_SpaceNoRule_Wiki() throws Exception
     {
         WikiReference testedWikiReference = new WikiReference("xwiki");
         SpaceReference testedSpaceReference = new SpaceReference("SP1", testedWikiReference);
@@ -730,7 +746,8 @@ public class DefaultRightsReaderTest extends AbstractRightsTest
         );
         // check what gets returned
         List<ReadableSecurityRule> inheritedRules = this.rightsReader.getActualRules(testedDocumentReference);
-        List<ReadableSecurityRule> normalizedInheritedRules = this.securityRuleAbacus.normalizeRulesBySubject(inheritedRules);
+        List<ReadableSecurityRule> normalizedInheritedRules =
+            this.securityRuleAbacus.normalizeRulesBySubject(inheritedRules);
         assertEquals(1, normalizedInheritedRules.size());
         assertContainsRule(normalizedInheritedRules,
             new DocumentReference("xwiki", "XWiki", "Admin"),
@@ -744,7 +761,7 @@ public class DefaultRightsReaderTest extends AbstractRightsTest
      * Test that the function is able to get actual rules up several parents
      */
     @Test
-    void getActualRules_Page_SpaceDifferentRule_WikiDifferentRule()
+    void getActualRules_Page_SpaceDifferentRule_WikiDifferentRule() throws Exception
     {
         WikiReference testedWikiReference = new WikiReference("xwiki");
         SpaceReference testedSpaceReference = new SpaceReference("SP1", testedWikiReference);
@@ -781,7 +798,8 @@ public class DefaultRightsReaderTest extends AbstractRightsTest
         );
         // check what gets returned
         List<ReadableSecurityRule> inheritedRules = this.rightsReader.getActualRules(testedDocumentReference);
-        List<ReadableSecurityRule> normalizedInheritedRules = this.securityRuleAbacus.normalizeRulesBySubject(inheritedRules);
+        List<ReadableSecurityRule> normalizedInheritedRules =
+            this.securityRuleAbacus.normalizeRulesBySubject(inheritedRules);
         assertEquals(3, normalizedInheritedRules.size());
         assertContainsRule(normalizedInheritedRules,
             new DocumentReference("xwiki", "XWiki", "XWikiAdminGroup"),
@@ -807,7 +825,7 @@ public class DefaultRightsReaderTest extends AbstractRightsTest
      * Test that if a parent document has no rule at all, it still goes up to the next parent
      */
     @Test
-    void getActualRules_Page_SpaceNoRule_WikiDifferentRule()
+    void getActualRules_Page_SpaceNoRule_WikiDifferentRule() throws Exception
     {
         WikiReference testedWikiReference = new WikiReference("xwiki");
         SpaceReference testedSpaceReference = new SpaceReference("SP1", testedWikiReference);
@@ -836,7 +854,8 @@ public class DefaultRightsReaderTest extends AbstractRightsTest
         );
         // check what gets returned
         List<ReadableSecurityRule> inheritedRules = this.rightsReader.getActualRules(testedDocumentReference);
-        List<ReadableSecurityRule> normalizedInheritedRules = this.securityRuleAbacus.normalizeRulesBySubject(inheritedRules);
+        List<ReadableSecurityRule> normalizedInheritedRules =
+            this.securityRuleAbacus.normalizeRulesBySubject(inheritedRules);
         assertEquals(2, normalizedInheritedRules.size());
         assertContainsRule(normalizedInheritedRules,
             new DocumentReference("xwiki", "XWiki", "XWikiAdminGroup"),
@@ -856,7 +875,7 @@ public class DefaultRightsReaderTest extends AbstractRightsTest
      * Test that if a there is no rules between two same rules in the document tree, this rule is only appearing once
      */
     @Test
-    void getActualRules_Page_SpaceNoRule_WikiSameRule()
+    void getActualRules_Page_SpaceNoRule_WikiSameRule() throws Exception
     {
         WikiReference testedWikiReference = new WikiReference("xwiki");
         SpaceReference testedSpaceReference = new SpaceReference("SP1", testedWikiReference);
@@ -885,7 +904,8 @@ public class DefaultRightsReaderTest extends AbstractRightsTest
         );
         // check what gets returned
         List<ReadableSecurityRule> inheritedRules = this.rightsReader.getActualRules(testedDocumentReference);
-        List<ReadableSecurityRule> normalizedInheritedRules = this.securityRuleAbacus.normalizeRulesBySubject(inheritedRules);
+        List<ReadableSecurityRule> normalizedInheritedRules =
+            this.securityRuleAbacus.normalizeRulesBySubject(inheritedRules);
         assertEquals(1, normalizedInheritedRules.size());
         assertContainsRule(normalizedInheritedRules,
             new DocumentReference("xwiki", "XWiki", "XWikiAdminGroup"),
@@ -899,7 +919,7 @@ public class DefaultRightsReaderTest extends AbstractRightsTest
      * Test that rights are being inherited from the main wiki if we are in a sub wiki
      */
     @Test
-    void getActualRules_Subwiki_wiki()
+    void getActualRules_Subwiki_wiki() throws Exception
     {
         WikiReference testedWikiReference = new WikiReference("xwiki");
         WikiReference testedSubWikiReference = new WikiReference("subwiki");
@@ -925,7 +945,8 @@ public class DefaultRightsReaderTest extends AbstractRightsTest
         );
         // check what gets returned
         List<ReadableSecurityRule> inheritedRules = this.rightsReader.getActualRules(testedSubWikiReference);
-        List<ReadableSecurityRule> normalizedInheritedRules = this.securityRuleAbacus.normalizeRulesBySubject(inheritedRules);
+        List<ReadableSecurityRule> normalizedInheritedRules =
+            this.securityRuleAbacus.normalizeRulesBySubject(inheritedRules);
         assertEquals(2, normalizedInheritedRules.size());
         assertContainsRule(normalizedInheritedRules,
             new DocumentReference("xwiki", "XWiki", "XWikiAdminGroup"),

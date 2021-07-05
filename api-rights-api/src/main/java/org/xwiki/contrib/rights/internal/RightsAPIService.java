@@ -42,6 +42,7 @@ import org.xwiki.model.reference.EntityReference;
 import org.xwiki.model.reference.SpaceReference;
 import org.xwiki.model.reference.WikiReference;
 import org.xwiki.script.service.ScriptService;
+import org.xwiki.security.authorization.AuthorizationException;
 import org.xwiki.security.authorization.AuthorizationManager;
 import org.xwiki.security.authorization.ReadableSecurityRule;
 import org.xwiki.security.authorization.Right;
@@ -98,7 +99,11 @@ public class RightsAPIService implements ScriptService
      */
     public List<ReadableSecurityRule> getActualRules(EntityReference ref)
     {
-        return rightsReader.getActualRules(ref);
+        try {
+            return rightsReader.getActualRules(ref);
+        } catch (AuthorizationException e) {
+            return null;
+        }
     }
 
     /**
@@ -110,7 +115,11 @@ public class RightsAPIService implements ScriptService
      */
     public List<ReadableSecurityRule> getRules(EntityReference ref, Boolean withImplied)
     {
-        return rightsReader.getRules(ref, withImplied);
+        try {
+            return rightsReader.getRules(ref, withImplied);
+        } catch (AuthorizationException e) {
+            return null;
+        }
     }
 
     /**
@@ -211,7 +220,8 @@ public class RightsAPIService implements ScriptService
     }
 
     /**
-     * Normalize a list of security rules to a canonical form, so that there is one and only one [user, state] per rule.
+     * Normalize a list of security rules to a canonical form, so that there is one and only one [user, state] per
+     * rule.
      *
      * @param rules The rules to normalize
      * @return The normalized rules
