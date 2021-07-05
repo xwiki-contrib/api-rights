@@ -102,6 +102,8 @@ public class RightsAPIService implements ScriptService
         try {
             return rightsReader.getActualRules(ref);
         } catch (AuthorizationException e) {
+            xcontextProvider.get().put(ERROR_MESSAGE, e.toString());
+            logger.error(e.toString(), e);
             return null;
         }
     }
@@ -118,6 +120,8 @@ public class RightsAPIService implements ScriptService
         try {
             return rightsReader.getRules(ref, withImplied);
         } catch (AuthorizationException e) {
+            xcontextProvider.get().put(ERROR_MESSAGE, e.toString());
+            logger.error(e.toString(), e);
             return null;
         }
     }
