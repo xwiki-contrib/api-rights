@@ -721,6 +721,102 @@ public class DefaultRightsReaderTest extends AbstractRightsTest
     }
 
     /**
+     * Test that if a parent document has admin right on a subject, and the child page has an admin right on another
+     * subject, both subject are going to appear with admin rights in the actual rules
+     */
+    @Test
+    void getActualRules_SpaceAdminRight_WikiDifferentSubjectsAdminRight() throws Exception
+    {
+        WikiReference testedWikiReference = new WikiReference("xwiki");
+        SpaceReference testedSpaceReference = new SpaceReference("SP1", testedWikiReference);
+        // return the following rule for when rules are asked for the wiki...
+        this.mockEntityReferenceRules(testedWikiReference, Arrays.asList(
+            new XWikiSecurityRule(
+                new RightSet(Right.ADMIN),
+                RuleState.ALLOW,
+                Collections.emptyList(),
+                Arrays.asList(new DocumentReference("xwiki", "XWiki", "XWikiAdminGroup")),
+                true
+            ))
+        );
+        // ... and the same rule for the space but with a different subject and more rights
+        this.mockEntityReferenceRules(testedSpaceReference, Arrays.asList(
+            new XWikiSecurityRule(
+                new RightSet(Right.ADMIN),
+                RuleState.ALLOW,
+                Arrays.asList(new DocumentReference("xwiki", "XWiki", "Bob")),
+                Collections.emptyList(),
+                true
+            ))
+        );
+        // check what gets returned
+        List<ReadableSecurityRule> inheritedRules = this.rightsReader.getActualRules(testedSpaceReference);
+        List<ReadableSecurityRule> normalizedInheritedRules =
+            this.securityRuleAbacus.normalizeRulesBySubject(inheritedRules);
+        assertEquals(2, normalizedInheritedRules.size());
+        assertContainsRule(normalizedInheritedRules,
+            new DocumentReference("xwiki", "XWiki", "XWikiAdminGroup"),
+            true,
+            Arrays.asList(Right.ADMIN),
+            RuleState.ALLOW
+        );
+        assertContainsRule(normalizedInheritedRules,
+            new DocumentReference("xwiki", "XWiki", "Bob"),
+            false,
+            Arrays.asList(Right.ADMIN),
+            RuleState.ALLOW
+        );
+    }
+
+    /**
+     * Test that if a parent document has programing right on a subject, and the child page has a programming right on
+     * another subject, both subject are going to appear with programming rights in the actual rules
+     */
+    @Test
+    void getActualRules_SpaceProgrammingRight_WikiDifferentSubjectsProgrammingRight() throws Exception
+    {
+        WikiReference testedWikiReference = new WikiReference("xwiki");
+        SpaceReference testedSpaceReference = new SpaceReference("SP1", testedWikiReference);
+        // return the following rule for when rules are asked for the wiki...
+        this.mockEntityReferenceRules(testedWikiReference, Arrays.asList(
+            new XWikiSecurityRule(
+                new RightSet(Right.PROGRAM),
+                RuleState.ALLOW,
+                Collections.emptyList(),
+                Arrays.asList(new DocumentReference("xwiki", "XWiki", "XWikiAdminGroup")),
+                true
+            ))
+        );
+        // ... and the same rule for the space but with a different subject and more rights
+        this.mockEntityReferenceRules(testedSpaceReference, Arrays.asList(
+            new XWikiSecurityRule(
+                new RightSet(Right.PROGRAM),
+                RuleState.ALLOW,
+                Arrays.asList(new DocumentReference("xwiki", "XWiki", "Bob")),
+                Collections.emptyList(),
+                true
+            ))
+        );
+        // check what gets returned
+        List<ReadableSecurityRule> inheritedRules = this.rightsReader.getActualRules(testedSpaceReference);
+        List<ReadableSecurityRule> normalizedInheritedRules =
+            this.securityRuleAbacus.normalizeRulesBySubject(inheritedRules);
+        assertEquals(2, normalizedInheritedRules.size());
+        assertContainsRule(normalizedInheritedRules,
+            new DocumentReference("xwiki", "XWiki", "XWikiAdminGroup"),
+            true,
+            Arrays.asList(Right.PROGRAM),
+            RuleState.ALLOW
+        );
+        assertContainsRule(normalizedInheritedRules,
+            new DocumentReference("xwiki", "XWiki", "Bob"),
+            false,
+            Arrays.asList(Right.PROGRAM),
+            RuleState.ALLOW
+        );
+    }
+
+    /**
      * Test that if the current document does not have any rules, nor its parent, parent of the parent rule are going to
      * be used
      */

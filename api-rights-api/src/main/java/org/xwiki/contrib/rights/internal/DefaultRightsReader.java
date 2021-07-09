@@ -92,6 +92,7 @@ public class DefaultRightsReader implements RightsReader
     {
         // Create a set containing rights that were explicitly encountered going up the parent tree
         // It will be updated based on what is found when looking at parent pages
+        // It only contains rights for which inheritanceOverridePolicy flag is true
         RightSet encounteredExplicitRights = new RightSet();
         // The list of all the actual (current + inherited) rules of the page
         List<ReadableSecurityRule> actualRules = new ArrayList<>();
@@ -118,11 +119,14 @@ public class DefaultRightsReader implements RightsReader
                     WritableSecurityRule toBeAddedSecurityRule = new WritableSecurityRuleImpl(rule);
                     toBeAddedSecurityRule.setRights(new RightSet(right));
                     actualRules.add(toBeAddedSecurityRule);
-                    toBeAddedExplicitRights.add(right);
+                    // If right override higher level, add it to be ignored for parent rules
+                    if (right.getInheritanceOverridePolicy()) {
+                        toBeAddedExplicitRights.add(right);
+                    }
                 }
             }
 
-            // Add every rights we explicitly encountered on the page
+            // Add rights we explicitly encountered on the page to be ignored in parent rules
             encounteredExplicitRights.addAll(toBeAddedExplicitRights);
             // Go to the parent security reference (parent space or main wiki)
             securityReference = securityReference.getParentSecurityReference();
