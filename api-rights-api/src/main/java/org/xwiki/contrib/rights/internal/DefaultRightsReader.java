@@ -108,7 +108,7 @@ public class DefaultRightsReader implements RightsReader
             // Inspect rules right by right to not miss any explicit right
             for (ReadableSecurityRule rule : inheritedPageRules) {
                 if (rule.getState() != RuleState.ALLOW) {
-                    throw new AuthorizationException("Error: getActualRules does not support deny rights");
+                    throw new UnsupportedOperationException("Error: getActualRules does not support deny rights");
                 }
                 for (Right right : rule.getRights()) {
                     // If the right was already set explicitly down the document tree, skip
