@@ -83,9 +83,12 @@ public interface RightsWriter
      * {@link RightsWriter#createRules(List)}, add a new rule and then persist them using this function. <br >
      * This function uses a default persistence strategy.
      *
-     * @param rules the new rules to set for the passed reference. They will replace whatever existing rules are
-     *     already there. Writable rules can also be passed, since they are readable as well.
+     * @param rules the new rules to set for the passed reference. They will replace whatever existing rules are already
+     *            there. Writable rules can also be passed, since they are readable as well.
      * @param reference the reference to update rules on. Can be a document or a space or a wiki.
+     * @throws XWikiException in case something goes wrong during save on the passed XWiki entity
+     * @throws UnsupportedOperationException if access rules cannot be saved at the level of the passed reference (the
+     *             reference is something else than a document, a space or a wiki)
      */
     void saveRules(List<ReadableSecurityRule> rules, EntityReference reference)
         throws XWikiException, UnsupportedOperationException;
@@ -100,6 +103,11 @@ public interface RightsWriter
      *            there. Writable rules can also be passed, since they are readable as well.
      * @param reference the reference to update rules on. Can be a document or a space or a wiki.
      * @param persistenceStrategyName the name of the persistence strategy to apply for the rule to rights
+     * @throws XWikiException in case something goes wrong during save on the passed XWiki entity
+     * @throws UnsupportedOperationException if access rules cannot be saved at the level of the passed reference (the
+     *             reference is something else than a document, a space or a wiki)
+     * @throws ComponentLookupException if no implementation of the persistence strategy with the passed name can be
+     *             found
      */
     void saveRules(List<ReadableSecurityRule> rules, EntityReference reference, String persistenceStrategyName)
         throws XWikiException, UnsupportedOperationException, ComponentLookupException;
