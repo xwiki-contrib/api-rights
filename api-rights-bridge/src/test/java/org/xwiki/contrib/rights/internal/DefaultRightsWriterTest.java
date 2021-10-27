@@ -17,25 +17,20 @@
  * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
-package org.xwiki.contrib.rights.internal.bridge;
+package org.xwiki.contrib.rights.internal;
 
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
-import java.util.stream.Collectors;
 
 import javax.inject.Named;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.xwiki.contrib.rights.RulesObjectWriter;
 import org.xwiki.contrib.rights.WritableSecurityRule;
-import org.xwiki.contrib.rights.internal.DefaultRightsWriter;
-import org.xwiki.contrib.rights.internal.IncrementingObjectNumbersRulesWriter;
-import org.xwiki.contrib.rights.internal.RecyclingObjectsRulesWriter;
-import org.xwiki.contrib.rights.internal.WritableSecurityRuleImpl;
 import org.xwiki.job.event.status.JobProgressManager;
 import org.xwiki.localization.ContextualLocalizationManager;
-import org.xwiki.model.EntityType;
 import org.xwiki.model.reference.DocumentReference;
 import org.xwiki.model.reference.EntityReference;
 import org.xwiki.model.reference.ObjectReference;
@@ -177,8 +172,8 @@ class DefaultRightsWriterTest extends AbstractRightsWriterTest
 
         // check that the desired right was added...
         // ... a single one 
-        assertEquals(1, getNonNullObjects(XWIKI_RIGHTS_CLASS, modifiedDocument).size());
-        BaseObject testedObject = modifiedDocument.getXObject(XWIKI_RIGHTS_CLASS);
+        assertEquals(1, getNonNullObjects(DefaultRightsWriter.XWIKI_RIGHTS_CLASS, modifiedDocument).size());
+        BaseObject testedObject = modifiedDocument.getXObject(DefaultRightsWriter.XWIKI_RIGHTS_CLASS);
         // ... with values from the rule
         assertEquals("", testedObject.getLargeStringValue(GROUPS_PROPERTY));
         assertEquals("", testedObject.getLargeStringValue(USERS_PROPERTY));
@@ -193,9 +188,9 @@ class DefaultRightsWriterTest extends AbstractRightsWriterTest
         // Check that indeed previous object was replaced with a new one.
         modifiedDocument = this.oldcore.getSpyXWiki().getDocument(documentReference, this.oldcore.getXWikiContext());
         // there is a single object
-        assertEquals(1, getNonNullObjects(XWIKI_RIGHTS_CLASS, modifiedDocument).size());
+        assertEquals(1, getNonNullObjects(DefaultRightsWriter.XWIKI_RIGHTS_CLASS, modifiedDocument).size());
         // the object has changed to the implement new rule
-        testedObject = modifiedDocument.getXObject(XWIKI_RIGHTS_CLASS);
+        testedObject = modifiedDocument.getXObject(DefaultRightsWriter.XWIKI_RIGHTS_CLASS);
         assertEquals("XWiki.XWikiAllGroup", testedObject.getLargeStringValue(GROUPS_PROPERTY));
         assertEquals("", testedObject.getLargeStringValue(USERS_PROPERTY));
         assertEquals("", testedObject.getLargeStringValue(LEVELS_PROPERTY));
@@ -217,8 +212,8 @@ class DefaultRightsWriterTest extends AbstractRightsWriterTest
         this.rightsWriter.saveRules(Collections.singletonList(writableSecurityRule), spaceReference);
 
         XWikiDocument document = oldcore.getSpyXWiki().getDocument(new DocumentReference("xwiki",
-            XWIKI_SPACE, XWIKI_WEB_PREFERENCES), oldcore.getXWikiContext());
-        List<BaseObject> objects = document.getXObjects(XWIKI_GLOBAL_RIGHTS_CLASS);
+            DefaultRightsWriter.XWIKI_SPACE, RulesObjectWriter.XWIKI_WEB_PREFERENCES), oldcore.getXWikiContext());
+        List<BaseObject> objects = document.getXObjects(DefaultRightsWriter.XWIKI_GLOBAL_RIGHTS_CLASS);
         assertEquals(1, objects.size());
 
         assertEquals(Arrays.asList("XWiki.Admin", "XWiki.SimpleUser"),
@@ -241,10 +236,11 @@ class DefaultRightsWriterTest extends AbstractRightsWriterTest
             "XWikiAllGroup")));
         writableSecurityRule.setRights(new RightSet(Right.EDIT));
         rightsWriter.saveRules(Collections.singletonList(writableSecurityRule), wikiReference);
-        EntityReference xwikiPreferences = new DocumentReference("xwiki", XWIKI_SPACE, "XWikiPreferences");
+        EntityReference xwikiPreferences =
+            new DocumentReference("xwiki", DefaultRightsWriter.XWIKI_SPACE, "XWikiPreferences");
         XWikiDocument document =
             oldcore.getSpyXWiki().getDocument(xwikiPreferences, oldcore.getXWikiContext());
-        assertEquals(1, document.getXObjects(XWIKI_GLOBAL_RIGHTS_CLASS).size());
+        assertEquals(1, document.getXObjects(DefaultRightsWriter.XWIKI_GLOBAL_RIGHTS_CLASS).size());
         // TODO: assert that the properties are persisted.
     }
 
@@ -262,28 +258,35 @@ class DefaultRightsWriterTest extends AbstractRightsWriterTest
         rule2.setState(RuleState.ALLOW);
 
         rule3.setState(RuleState.ALLOW);
-        rule3.setUsers(Collections.singletonList(new DocumentReference("xwiki", XWIKI_SPACE, "XWikiAdmin")));
+        rule3.setUsers(Collections.singletonList(
+            new DocumentReference("xwiki", DefaultRightsWriter.XWIKI_SPACE, "XWikiAdmin")));
 
         rightsWriter.saveRules(Arrays.asList(rule1, rule2, rule3), documentReference);
 
         XWikiDocument document = oldcore.getSpyXWiki().getDocument(documentReference, oldcore.getXWikiContext());
 
-        assertEquals(3, document.getXObjects(XWIKI_RIGHTS_CLASS).size());
+        assertEquals(3, document.getXObjects(DefaultRightsWriter.XWIKI_RIGHTS_CLASS).size());
 
         assertEquals(Arrays.asList(Right.EDIT.getName(), Right.PROGRAM.getName()),
             LevelsClass
-                .getListFromString(document.getXObjects(XWIKI_RIGHTS_CLASS).get(0).getLargeStringValue("levels")));
-        assertEquals(0, document.getXObjects(XWIKI_RIGHTS_CLASS).get(0).getIntValue(XWikiConstants.ALLOW_FIELD_NAME));
+                .getListFromString(document.getXObjects(DefaultRightsWriter.XWIKI_RIGHTS_CLASS)
+                    .get(0).getLargeStringValue("levels")));
+        assertEquals(0, document.getXObjects(DefaultRightsWriter.XWIKI_RIGHTS_CLASS).get(0)
+            .getIntValue(XWikiConstants.ALLOW_FIELD_NAME));
 
         assertEquals(Collections.singletonList(Right.VIEW.getName()),
             LevelsClass
-                .getListFromString(document.getXObjects(XWIKI_RIGHTS_CLASS).get(1).getLargeStringValue("levels")));
-        assertEquals(1, document.getXObjects(XWIKI_RIGHTS_CLASS).get(1).getIntValue(XWikiConstants.ALLOW_FIELD_NAME));
+                .getListFromString(document.getXObjects(DefaultRightsWriter.XWIKI_RIGHTS_CLASS)
+                    .get(1).getLargeStringValue("levels")));
+        assertEquals(1, document.getXObjects(DefaultRightsWriter.XWIKI_RIGHTS_CLASS)
+            .get(1).getIntValue(XWikiConstants.ALLOW_FIELD_NAME));
 
         assertEquals(Collections.singletonList("XWiki.XWikiAdmin"),
             UsersClass
-                .getListFromString(document.getXObjects(XWIKI_RIGHTS_CLASS).get(2).getLargeStringValue("users")));
-        assertEquals(1, document.getXObjects(XWIKI_RIGHTS_CLASS).get(2).getIntValue(XWikiConstants.ALLOW_FIELD_NAME));
+                .getListFromString(document.getXObjects(DefaultRightsWriter.XWIKI_RIGHTS_CLASS)
+                    .get(2).getLargeStringValue("users")));
+        assertEquals(1, document.getXObjects(DefaultRightsWriter.XWIKI_RIGHTS_CLASS)
+            .get(2).getIntValue(XWikiConstants.ALLOW_FIELD_NAME));
     }
 
     @Test
@@ -302,8 +305,8 @@ class DefaultRightsWriterTest extends AbstractRightsWriterTest
         XWikiDocument resultDoc =
             this.oldcore.getSpyXWiki().getDocument(documentReference, this.oldcore.getXWikiContext());
         // check that there is a single object set
-        assertEquals(1, resultDoc.getXObjects(XWIKI_RIGHTS_CLASS).size());
-        BaseObject rightsObj = resultDoc.getXObject(XWIKI_RIGHTS_CLASS);
+        assertEquals(1, resultDoc.getXObjects(DefaultRightsWriter.XWIKI_RIGHTS_CLASS).size());
+        BaseObject rightsObj = resultDoc.getXObject(DefaultRightsWriter.XWIKI_RIGHTS_CLASS);
         // check that the users are set to empty
         assertEquals("", rightsObj.getLargeStringValue(USERS_PROPERTY));
         // and the rest of the object is set properly, as we asked for
@@ -328,8 +331,8 @@ class DefaultRightsWriterTest extends AbstractRightsWriterTest
         XWikiDocument resultDoc =
             this.oldcore.getSpyXWiki().getDocument(documentReference, this.oldcore.getXWikiContext());
         // check that there is a single object set
-        assertEquals(1, resultDoc.getXObjects(XWIKI_RIGHTS_CLASS).size());
-        BaseObject rightsObj = resultDoc.getXObject(XWIKI_RIGHTS_CLASS);
+        assertEquals(1, resultDoc.getXObjects(DefaultRightsWriter.XWIKI_RIGHTS_CLASS).size());
+        BaseObject rightsObj = resultDoc.getXObject(DefaultRightsWriter.XWIKI_RIGHTS_CLASS);
         // check that the groups are set to empty
         assertEquals("", rightsObj.getLargeStringValue(GROUPS_PROPERTY));
         // and the rest of the object is set properly, as we asked for
@@ -352,8 +355,8 @@ class DefaultRightsWriterTest extends AbstractRightsWriterTest
         XWikiDocument resultDoc =
             this.oldcore.getSpyXWiki().getDocument(documentReference, this.oldcore.getXWikiContext());
         // check that there is a single object set
-        assertEquals(1, resultDoc.getXObjects(XWIKI_RIGHTS_CLASS).size());
-        BaseObject rightsObj = resultDoc.getXObject(XWIKI_RIGHTS_CLASS);
+        assertEquals(1, resultDoc.getXObjects(DefaultRightsWriter.XWIKI_RIGHTS_CLASS).size());
+        BaseObject rightsObj = resultDoc.getXObject(DefaultRightsWriter.XWIKI_RIGHTS_CLASS);
         // check that the users and groups are set to empty
         assertEquals("", rightsObj.getLargeStringValue(GROUPS_PROPERTY));
         assertEquals("", rightsObj.getLargeStringValue(USERS_PROPERTY));
@@ -378,8 +381,8 @@ class DefaultRightsWriterTest extends AbstractRightsWriterTest
         XWikiDocument resultDoc =
             this.oldcore.getSpyXWiki().getDocument(documentReference, this.oldcore.getXWikiContext());
         // check that there is a single object set
-        assertEquals(1, resultDoc.getXObjects(XWIKI_RIGHTS_CLASS).size());
-        BaseObject rightsObj = resultDoc.getXObject(XWIKI_RIGHTS_CLASS);
+        assertEquals(1, resultDoc.getXObjects(DefaultRightsWriter.XWIKI_RIGHTS_CLASS).size());
+        BaseObject rightsObj = resultDoc.getXObject(DefaultRightsWriter.XWIKI_RIGHTS_CLASS);
         // check that the rights are set to none
         assertEquals("", rightsObj.getLargeStringValue(LEVELS_PROPERTY));
         // and the rest of the object is set properly, as we asked for
@@ -404,8 +407,8 @@ class DefaultRightsWriterTest extends AbstractRightsWriterTest
         XWikiDocument resultDoc =
             this.oldcore.getSpyXWiki().getDocument(documentReference, this.oldcore.getXWikiContext());
         // check that there is a single object set
-        assertEquals(1, resultDoc.getXObjects(XWIKI_RIGHTS_CLASS).size());
-        BaseObject rightsObj = resultDoc.getXObject(XWIKI_RIGHTS_CLASS);
+        assertEquals(1, resultDoc.getXObjects(DefaultRightsWriter.XWIKI_RIGHTS_CLASS).size());
+        BaseObject rightsObj = resultDoc.getXObject(DefaultRightsWriter.XWIKI_RIGHTS_CLASS);
         // check that the allow is set to default true
         assertEquals(1, rightsObj.getIntValue(ALLOW_PROPERTY));
         // and the rest of the object is set properly, as we asked for
@@ -429,8 +432,8 @@ class DefaultRightsWriterTest extends AbstractRightsWriterTest
         XWikiDocument resultDoc =
             this.oldcore.getSpyXWiki().getDocument(documentReference, this.oldcore.getXWikiContext());
         // check that there is a single object set
-        assertEquals(1, resultDoc.getXObjects(XWIKI_RIGHTS_CLASS).size());
-        BaseObject rightsObj = resultDoc.getXObject(XWIKI_RIGHTS_CLASS);
+        assertEquals(1, resultDoc.getXObjects(DefaultRightsWriter.XWIKI_RIGHTS_CLASS).size());
+        BaseObject rightsObj = resultDoc.getXObject(DefaultRightsWriter.XWIKI_RIGHTS_CLASS);
         // check that the users and groups are set to empty
         assertEquals("", rightsObj.getLargeStringValue(GROUPS_PROPERTY));
         assertEquals("", rightsObj.getLargeStringValue(USERS_PROPERTY));
@@ -458,10 +461,10 @@ class DefaultRightsWriterTest extends AbstractRightsWriterTest
         XWikiDocument resultDoc =
             this.oldcore.getSpyXWiki().getDocument(documentReference, this.oldcore.getXWikiContext());
         // check that there is a single object set
-        assertEquals(1, resultDoc.getXObjects(XWIKI_RIGHTS_CLASS).size());
+        assertEquals(1, resultDoc.getXObjects(DefaultRightsWriter.XWIKI_RIGHTS_CLASS).size());
         // check that the value of the group set in the object is not prefixed
         assertEquals("XWiki.XWikiAdminGroup",
-            resultDoc.getXObject(XWIKI_RIGHTS_CLASS).getLargeStringValue(GROUPS_PROPERTY));
+            resultDoc.getXObject(DefaultRightsWriter.XWIKI_RIGHTS_CLASS).getLargeStringValue(GROUPS_PROPERTY));
     }
 
     @Test
@@ -494,8 +497,8 @@ class DefaultRightsWriterTest extends AbstractRightsWriterTest
     void addRightsOnSpace() throws XWikiException
     {
         SpaceReference spaceReference = new SpaceReference("xwiki", "MySpace");
-        DocumentReference adminGroup = new DocumentReference("XWikiAdminGroup", new SpaceReference(XWIKI_SPACE,
-            new WikiReference("xwiki")));
+        DocumentReference adminGroup = new DocumentReference("XWikiAdminGroup",
+            new SpaceReference(DefaultRightsWriter.XWIKI_SPACE, new WikiReference("xwiki")));
         DocumentReference adminUser = new DocumentReference("XWikiAdmin", spaceReference);
 
         WritableSecurityRule rule = new WritableSecurityRuleImpl(Collections.singletonList(adminGroup),
@@ -504,16 +507,19 @@ class DefaultRightsWriterTest extends AbstractRightsWriterTest
 
         rightsWriter.saveRules(Collections.singletonList(rule), spaceReference);
 
-        DocumentReference spaceWebPreference = new DocumentReference(XWIKI_WEB_PREFERENCES, spaceReference);
+        DocumentReference spaceWebPreference =
+            new DocumentReference(RulesObjectWriter.XWIKI_WEB_PREFERENCES, spaceReference);
 
         XWikiDocument spaceWebPreferenceDoc = oldcore.getSpyXWiki().getDocument(spaceWebPreference,
             oldcore.getXWikiContext());
 
-        assertEquals(1, spaceWebPreferenceDoc.getXObjects(XWIKI_GLOBAL_RIGHTS_CLASS).size());
+        assertEquals(1, spaceWebPreferenceDoc.getXObjects(DefaultRightsWriter.XWIKI_GLOBAL_RIGHTS_CLASS).size());
         assertEquals("XWiki.XWikiAdminGroup",
-            spaceWebPreferenceDoc.getXObjects(XWIKI_GLOBAL_RIGHTS_CLASS).get(0).getLargeStringValue(GROUPS_PROPERTY));
+            spaceWebPreferenceDoc.getXObjects(DefaultRightsWriter.XWIKI_GLOBAL_RIGHTS_CLASS)
+                .get(0).getLargeStringValue(GROUPS_PROPERTY));
         assertEquals("MySpace.XWikiAdmin",
-            spaceWebPreferenceDoc.getXObjects(XWIKI_GLOBAL_RIGHTS_CLASS).get(0).getLargeStringValue(USERS_PROPERTY));
+            spaceWebPreferenceDoc.getXObjects(DefaultRightsWriter.XWIKI_GLOBAL_RIGHTS_CLASS)
+                .get(0).getLargeStringValue(USERS_PROPERTY));
     }
 
     @Test
@@ -537,15 +543,18 @@ class DefaultRightsWriterTest extends AbstractRightsWriterTest
 
         rightsWriter.saveRules(Collections.singletonList(writableSecurityRule), spaceToSetRights);
 
-        XWikiDocument document = oldcore.getSpyXWiki().getDocument(new DocumentReference(XWIKI_WEB_PREFERENCES,
-            spaceToSetRights), oldcore.getXWikiContext());
+        XWikiDocument document = oldcore.getSpyXWiki().getDocument(
+                new DocumentReference(RulesObjectWriter.XWIKI_WEB_PREFERENCES, spaceToSetRights),
+                oldcore.getXWikiContext());
 
         assertEquals("anotherWiki:Space.XWikiAllGroup",
-            document.getXObjects(XWIKI_GLOBAL_RIGHTS_CLASS).get(0).getLargeStringValue(GROUPS_PROPERTY));
+            document.getXObjects(DefaultRightsWriter.XWIKI_GLOBAL_RIGHTS_CLASS)
+                .get(0).getLargeStringValue(GROUPS_PROPERTY));
 
         assertEquals(Arrays.asList("subwiki:XWiki.XWikiAdmin", "Space.SimpleUser"),
             UsersClass.getListFromString(
-                document.getXObjects(XWIKI_GLOBAL_RIGHTS_CLASS).get(0).getLargeStringValue(USERS_PROPERTY)));
+                document.getXObjects(DefaultRightsWriter.XWIKI_GLOBAL_RIGHTS_CLASS)
+                    .get(0).getLargeStringValue(USERS_PROPERTY)));
     }
 
 //    @Test
@@ -612,7 +621,8 @@ class DefaultRightsWriterTest extends AbstractRightsWriterTest
         // This test is about checking the case when a document saving fails. In this case, the right object should
         // have no properties set (eg. we don't have a mix between old and new properties).
         SpaceReference spaceToSetRights = new SpaceReference("xwiki", "MySpace");
-        DocumentReference spaceWebPref = new DocumentReference(XWIKI_WEB_PREFERENCES, spaceToSetRights);
+        DocumentReference spaceWebPref =
+            new DocumentReference(RulesObjectWriter.XWIKI_WEB_PREFERENCES, spaceToSetRights);
 
         XWikiDocument docBeforeSave = oldcore.getSpyXWiki().getDocument(spaceWebPref, oldcore.getXWikiContext());
 
@@ -623,7 +633,7 @@ class DefaultRightsWriterTest extends AbstractRightsWriterTest
         XWikiDocument docBeforeSavingRules = oldcore.getSpyXWiki().getDocument(spaceWebPref, oldcore.getXWikiContext());
 
         // there are no objects in the document before the save
-        assertEquals(0, docBeforeSavingRules.getXObjects(XWIKI_GLOBAL_RIGHTS_CLASS).size());
+        assertEquals(0, docBeforeSavingRules.getXObjects(DefaultRightsWriter.XWIKI_GLOBAL_RIGHTS_CLASS).size());
 
         // make sure the save fails
         boolean saveFailed = false;
@@ -642,7 +652,7 @@ class DefaultRightsWriterTest extends AbstractRightsWriterTest
         assertTrue(saveFailed);
 
         // there are still no objects in the document after the save
-        assertEquals(0, docBeforeSavingRules.getXObjects(XWIKI_GLOBAL_RIGHTS_CLASS).size());
+        assertEquals(0, docBeforeSavingRules.getXObjects(DefaultRightsWriter.XWIKI_GLOBAL_RIGHTS_CLASS).size());
 
         // even if re-fetching the document from the xwiki, there are still no objects in it
         // This part of the test is not fully relevant because the cache simulation in the mocked old core store is not
@@ -650,7 +660,7 @@ class DefaultRightsWriterTest extends AbstractRightsWriterTest
         // framework)
         XWikiDocument documentAfterSavingRules =
             oldcore.getSpyXWiki().getDocument(spaceWebPref, oldcore.getXWikiContext());
-        assertEquals(0, documentAfterSavingRules.getXObjects(XWIKI_GLOBAL_RIGHTS_CLASS).size());
+        assertEquals(0, documentAfterSavingRules.getXObjects(DefaultRightsWriter.XWIKI_GLOBAL_RIGHTS_CLASS).size());
     }
 
     /**
@@ -669,7 +679,8 @@ class DefaultRightsWriterTest extends AbstractRightsWriterTest
         // This test is about checking the case when a document saving fails. In this case, the right object should
         // have no properties set (eg. we don't have a mix between old and new properties).
         SpaceReference spaceToSetRights = new SpaceReference("xwiki", "MySpace");
-        DocumentReference spaceWebPref = new DocumentReference(XWIKI_WEB_PREFERENCES, spaceToSetRights);
+        DocumentReference spaceWebPref =
+            new DocumentReference(RulesObjectWriter.XWIKI_WEB_PREFERENCES, spaceToSetRights);
 
         XWikiDocument docBeforeSave = oldcore.getSpyXWiki().getDocument(spaceWebPref, oldcore.getXWikiContext());
 
@@ -680,7 +691,7 @@ class DefaultRightsWriterTest extends AbstractRightsWriterTest
         XWikiDocument docBeforeSavingRules = oldcore.getSpyXWiki().getDocument(spaceWebPref, oldcore.getXWikiContext());
 
         // there are no objects in the document before the save
-        assertEquals(0, docBeforeSavingRules.getXObjects(XWIKI_GLOBAL_RIGHTS_CLASS).size());
+        assertEquals(0, docBeforeSavingRules.getXObjects(DefaultRightsWriter.XWIKI_GLOBAL_RIGHTS_CLASS).size());
 
         WritableSecurityRule writableSecurityRule = new WritableSecurityRuleImpl(
             Collections.singletonList(new DocumentReference("xwiki", "XWiki", "XWikiAdminGroup")),
@@ -689,11 +700,12 @@ class DefaultRightsWriterTest extends AbstractRightsWriterTest
         rightsWriter.saveRules(Collections.singletonList(writableSecurityRule), spaceToSetRights);
 
         // there are still no objects in the document that was fetched before the save
-        assertEquals(0, docBeforeSavingRules.getXObjects(XWIKI_GLOBAL_RIGHTS_CLASS).size());
+        assertEquals(0, docBeforeSavingRules.getXObjects(DefaultRightsWriter.XWIKI_GLOBAL_RIGHTS_CLASS).size());
 
         // there are objects on the document after re-fetching it from the "store"
         XWikiDocument documentAfterSavingRules =
             oldcore.getSpyXWiki().getDocument(spaceWebPref, oldcore.getXWikiContext());
-        assertEquals(1, getNonNullObjects(XWIKI_GLOBAL_RIGHTS_CLASS, documentAfterSavingRules).size());
+        assertEquals(1,
+            getNonNullObjects(DefaultRightsWriter.XWIKI_GLOBAL_RIGHTS_CLASS, documentAfterSavingRules).size());
     }
 }

@@ -2,3 +2,4 @@ org.xwiki.contrib.rights.internal.DefaultRightsWriter
 org.xwiki.contrib.rights.internal.DefaultSecurityEntryReader
 org.xwiki.contrib.rights.internal.IncrementingObjectNumbersRulesWriter
 org.xwiki.contrib.rights.internal.RecyclingObjectsRulesWriter
+org.xwiki.contrib.rights.internal.RightObjectEventListener

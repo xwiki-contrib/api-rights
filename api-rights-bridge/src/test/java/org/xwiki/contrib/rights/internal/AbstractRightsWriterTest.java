@@ -17,7 +17,7 @@
  * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
-package org.xwiki.contrib.rights.internal.bridge;
+package org.xwiki.contrib.rights.internal;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -39,16 +39,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
  */
 public class AbstractRightsWriterTest
 {
-    static final String XWIKI_SPACE = "XWiki";
-
-    static final String XWIKI_WEB_PREFERENCES = "WebPreferences";
-
-    static final EntityReference XWIKI_RIGHTS_CLASS =
-        new EntityReference("XWikiRights", EntityType.DOCUMENT, new EntityReference(XWIKI_SPACE, EntityType.SPACE));
-
-    static final EntityReference XWIKI_GLOBAL_RIGHTS_CLASS = new EntityReference("XWikiGlobalRights",
-        EntityType.DOCUMENT, new EntityReference(XWIKI_SPACE, EntityType.SPACE));
-
     /**
      * Helper function to setup mandatory classes on a different subwiki than the main wiki.
      *

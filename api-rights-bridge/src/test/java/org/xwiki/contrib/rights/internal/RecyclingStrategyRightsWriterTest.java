@@ -17,7 +17,7 @@
  * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
-package org.xwiki.contrib.rights.internal.bridge;
+package org.xwiki.contrib.rights.internal;
 
 import java.util.Arrays;
 import java.util.Collections;
@@ -28,11 +28,8 @@ import javax.inject.Named;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.xwiki.component.manager.ComponentLookupException;
+import org.xwiki.contrib.rights.RulesObjectWriter;
 import org.xwiki.contrib.rights.WritableSecurityRule;
-import org.xwiki.contrib.rights.internal.DefaultRightsWriter;
-import org.xwiki.contrib.rights.internal.IncrementingObjectNumbersRulesWriter;
-import org.xwiki.contrib.rights.internal.RecyclingObjectsRulesWriter;
-import org.xwiki.contrib.rights.internal.WritableSecurityRuleImpl;
 import org.xwiki.job.event.status.JobProgressManager;
 import org.xwiki.localization.ContextualLocalizationManager;
 import org.xwiki.model.reference.DocumentReference;
@@ -121,14 +118,17 @@ public class RecyclingStrategyRightsWriterTest extends AbstractRightsWriterTest
 
         rightsWriter.saveRules(Arrays.asList(dumb, dumb1, dumb, dumb1), spaceReference, "recycling");
 
-        DocumentReference spaceWebPreferencesRef = new DocumentReference(XWIKI_WEB_PREFERENCES, spaceReference);
+        DocumentReference spaceWebPreferencesRef =
+            new DocumentReference(RulesObjectWriter.XWIKI_WEB_PREFERENCES, spaceReference);
         XWikiDocument spaceWebPreferencesDoc =
             oldcore.getSpyXWiki().getDocument(spaceWebPreferencesRef, oldcore.getXWikiContext());
 
         int expected = 4;
-        assertEquals(expected, spaceWebPreferencesDoc.getXObjects(XWIKI_GLOBAL_RIGHTS_CLASS).size());
+        assertEquals(expected,
+            spaceWebPreferencesDoc.getXObjects(DefaultRightsWriter.XWIKI_GLOBAL_RIGHTS_CLASS).size());
         for (int i = 0; i < expected; ++i) {
-            assertEquals(i, spaceWebPreferencesDoc.getXObjects(XWIKI_GLOBAL_RIGHTS_CLASS).get(i).getNumber());
+            assertEquals(i,
+                spaceWebPreferencesDoc.getXObjects(DefaultRightsWriter.XWIKI_GLOBAL_RIGHTS_CLASS).get(i).getNumber());
         }
 
         WritableSecurityRule ruleToCopy = new WritableSecurityRuleImpl(Collections.emptyList(), Collections.emptyList(),
@@ -139,8 +139,10 @@ public class RecyclingStrategyRightsWriterTest extends AbstractRightsWriterTest
         // The XWikiDocument was changed in the store, need to retrieve it again.
         spaceWebPreferencesDoc = oldcore.getSpyXWiki().getDocument(spaceWebPreferencesRef, oldcore.getXWikiContext());
         // From the entire list of objects, we're interested only in ones that are not null.
-        assertEquals(1, getNonNullObjects(XWIKI_GLOBAL_RIGHTS_CLASS, spaceWebPreferencesDoc).size());
-        assertEquals(0, getNonNullObjects(XWIKI_GLOBAL_RIGHTS_CLASS, spaceWebPreferencesDoc).get(0).getNumber());
+        assertEquals(1,
+            getNonNullObjects(DefaultRightsWriter.XWIKI_GLOBAL_RIGHTS_CLASS, spaceWebPreferencesDoc).size());
+        assertEquals(0, getNonNullObjects(DefaultRightsWriter.XWIKI_GLOBAL_RIGHTS_CLASS, spaceWebPreferencesDoc)
+            .get(0).getNumber());
     }
 
     @Test
@@ -169,10 +171,10 @@ public class RecyclingStrategyRightsWriterTest extends AbstractRightsWriterTest
         XWikiDocument document = oldcore.getSpyXWiki().getDocument(documentReference, oldcore.getXWikiContext());
 
         int noPersistedObjects = 2;
-        assertEquals(noPersistedObjects, document.getXObjects(XWIKI_RIGHTS_CLASS).size());
+        assertEquals(noPersistedObjects, document.getXObjects(DefaultRightsWriter.XWIKI_RIGHTS_CLASS).size());
 
         for (int i = 0; i < noPersistedObjects; ++i) {
-            assertEquals(i, document.getXObjects(XWIKI_RIGHTS_CLASS).get(i).getNumber());
+            assertEquals(i, document.getXObjects(DefaultRightsWriter.XWIKI_RIGHTS_CLASS).get(i).getNumber());
         }
 
         rightsWriter.saveRules(Arrays.asList(dumbRight2, dumb, dumbRight2, dumbRight2), documentReference, "recycling");
@@ -181,88 +183,101 @@ public class RecyclingStrategyRightsWriterTest extends AbstractRightsWriterTest
         document = oldcore.getSpyXWiki().getDocument(documentReference, oldcore.getXWikiContext());
 
         noPersistedObjects = 4;
-        assertEquals(noPersistedObjects, document.getXObjects(XWIKI_RIGHTS_CLASS).size());
+        assertEquals(noPersistedObjects, document.getXObjects(DefaultRightsWriter.XWIKI_RIGHTS_CLASS).size());
         for (int i = 0; i < noPersistedObjects; ++i) {
-            assertEquals(i, document.getXObjects(XWIKI_RIGHTS_CLASS).get(i).getNumber());
+            assertEquals(i, document.getXObjects(DefaultRightsWriter.XWIKI_RIGHTS_CLASS).get(i).getNumber());
         }
     }
 
     @Test
     void testReplaceWithSingleRuleOnSpace() throws XWikiException, ComponentLookupException
     {
-        replaceWithSingleRule(new SpaceReference("xwiki", "Space", "MySpace"), XWIKI_GLOBAL_RIGHTS_CLASS,
-            new DocumentReference("xwiki", Arrays.asList("Space", "MySpace"), XWIKI_WEB_PREFERENCES));
+        replaceWithSingleRule(new SpaceReference("xwiki", "Space", "MySpace"),
+            DefaultRightsWriter.XWIKI_GLOBAL_RIGHTS_CLASS,
+            new DocumentReference("xwiki", Arrays.asList("Space", "MySpace"), RulesObjectWriter.XWIKI_WEB_PREFERENCES));
     }
 
     @Test
     void testReplaceWithSingleRuleOnPage() throws XWikiException, ComponentLookupException
     {
-        replaceWithSingleRule(new DocumentReference("xwiki", "space", "myPage"), XWIKI_RIGHTS_CLASS,
+        replaceWithSingleRule(new DocumentReference("xwiki", "space", "myPage"), DefaultRightsWriter.XWIKI_RIGHTS_CLASS,
             new DocumentReference("xwiki", "space", "myPage"));
     }
 
     @Test
     void testIgnoreNullObjectOnRecyclingOnPage() throws XWikiException, ComponentLookupException
     {
-        ignoreNullObjectOnRecycling(new DocumentReference("xwiki", "space", "myPage"), XWIKI_RIGHTS_CLASS,
+        ignoreNullObjectOnRecycling(new DocumentReference("xwiki", "space", "myPage"),
+            DefaultRightsWriter.XWIKI_RIGHTS_CLASS,
             new DocumentReference("xwiki", "space", "myPage"));
     }
 
     @Test
     void testIgnoreNullObjectOnRecyclingOnSpace() throws XWikiException, ComponentLookupException
     {
-        ignoreNullObjectOnRecycling(new SpaceReference("xwiki", "Space", "MySpace"), XWIKI_GLOBAL_RIGHTS_CLASS,
-            new DocumentReference("xwiki", Arrays.asList("Space", "MySpace"), XWIKI_WEB_PREFERENCES));
+        ignoreNullObjectOnRecycling(new SpaceReference("xwiki", "Space", "MySpace"),
+            DefaultRightsWriter.XWIKI_GLOBAL_RIGHTS_CLASS,
+            new DocumentReference("xwiki", Arrays.asList("Space", "MySpace"), RulesObjectWriter.XWIKI_WEB_PREFERENCES));
     }
 
     @Test
     void testCleanupNullObjectsOnRecyclingOnPage() throws XWikiException, ComponentLookupException
     {
-        cleanupNullObjectsOnRecycling(new DocumentReference("xwiki", "space", "myPage"), XWIKI_RIGHTS_CLASS,
+        cleanupNullObjectsOnRecycling(new DocumentReference("xwiki", "space", "myPage"),
+            DefaultRightsWriter.XWIKI_RIGHTS_CLASS,
             new DocumentReference("xwiki", "space", "myPage"));
     }
 
     @Test
     void testCleanupNullObjectsOnRecyclingOnSpace() throws XWikiException, ComponentLookupException
     {
-        cleanupNullObjectsOnRecycling(new SpaceReference("xwiki", "Space", "MySpace"), XWIKI_GLOBAL_RIGHTS_CLASS,
-            new DocumentReference("xwiki", Arrays.asList("Space", "MySpace"), XWIKI_WEB_PREFERENCES));
+        cleanupNullObjectsOnRecycling(new SpaceReference("xwiki", "Space", "MySpace"),
+            DefaultRightsWriter.XWIKI_GLOBAL_RIGHTS_CLASS,
+            new DocumentReference("xwiki", Arrays.asList("Space", "MySpace"), RulesObjectWriter.XWIKI_WEB_PREFERENCES));
     }
 
     @Test
     void testRecycleExactNonNullObjectsOnPage() throws XWikiException, ComponentLookupException
     {
-        recycleAllNonNullObjects(new DocumentReference("xwiki", "space", "Obj0IsNull"), XWIKI_RIGHTS_CLASS,
-            new DocumentReference("xwiki", "space", "Obj0IsNull"), 0);
-        recycleAllNonNullObjects(new DocumentReference("xwiki", "space", "Obj1IsNull"), XWIKI_RIGHTS_CLASS,
-            new DocumentReference("xwiki", "space", "Obj1IsNull"), 1);
-        recycleAllNonNullObjects(new DocumentReference("xwiki", "space", "Obj2IsNull"), XWIKI_RIGHTS_CLASS,
-            new DocumentReference("xwiki", "space", "Obj2IsNull"), 2);
+        recycleAllNonNullObjects(new DocumentReference("xwiki", "space", "Obj0IsNull"),
+            DefaultRightsWriter.XWIKI_RIGHTS_CLASS, new DocumentReference("xwiki", "space", "Obj0IsNull"), 0);
+        recycleAllNonNullObjects(new DocumentReference("xwiki", "space", "Obj1IsNull"),
+            DefaultRightsWriter.XWIKI_RIGHTS_CLASS, new DocumentReference("xwiki", "space", "Obj1IsNull"), 1);
+        recycleAllNonNullObjects(new DocumentReference("xwiki", "space", "Obj2IsNull"),
+            DefaultRightsWriter.XWIKI_RIGHTS_CLASS, new DocumentReference("xwiki", "space", "Obj2IsNull"), 2);
     }
 
     @Test
     void testRecycleExactNonNullObjectsOnSpace() throws XWikiException, ComponentLookupException
     {
-        recycleAllNonNullObjects(new SpaceReference("xwiki", "Space", "Obj0IsNull"), XWIKI_GLOBAL_RIGHTS_CLASS,
-            new DocumentReference("xwiki", Arrays.asList("Space", "Obj0IsNull"), XWIKI_WEB_PREFERENCES), 0);
-        recycleAllNonNullObjects(new SpaceReference("xwiki", "Space", "Obj1IsNull"), XWIKI_GLOBAL_RIGHTS_CLASS,
-            new DocumentReference("xwiki", Arrays.asList("Space", "Obj1IsNull"), XWIKI_WEB_PREFERENCES), 1);
-        recycleAllNonNullObjects(new SpaceReference("xwiki", "Space", "Obj2IsNull"), XWIKI_GLOBAL_RIGHTS_CLASS,
-            new DocumentReference("xwiki", Arrays.asList("Space", "Obj2IsNull"), XWIKI_WEB_PREFERENCES), 2);
+        recycleAllNonNullObjects(new SpaceReference("xwiki", "Space", "Obj0IsNull"),
+            DefaultRightsWriter.XWIKI_GLOBAL_RIGHTS_CLASS,
+            new DocumentReference("xwiki", Arrays.asList("Space", "Obj0IsNull"),
+                RulesObjectWriter.XWIKI_WEB_PREFERENCES), 0);
+        recycleAllNonNullObjects(new SpaceReference("xwiki", "Space", "Obj1IsNull"),
+            DefaultRightsWriter.XWIKI_GLOBAL_RIGHTS_CLASS,
+            new DocumentReference("xwiki", Arrays.asList("Space", "Obj1IsNull"),
+                RulesObjectWriter.XWIKI_WEB_PREFERENCES), 1);
+        recycleAllNonNullObjects(new SpaceReference("xwiki", "Space", "Obj2IsNull"),
+            DefaultRightsWriter.XWIKI_GLOBAL_RIGHTS_CLASS,
+            new DocumentReference("xwiki", Arrays.asList("Space", "Obj2IsNull"),
+                RulesObjectWriter.XWIKI_WEB_PREFERENCES), 2);
     }
 
     @Test
     void testNotEnoughNonNullObjectsOnPage() throws XWikiException, ComponentLookupException
     {
-        notEnoughRecyclableObjects(new DocumentReference("xwiki", "space", "myPage"), XWIKI_RIGHTS_CLASS,
-            new DocumentReference("xwiki", "space", "myPage"));
+        notEnoughRecyclableObjects(new DocumentReference("xwiki", "space", "myPage"),
+            DefaultRightsWriter.XWIKI_RIGHTS_CLASS, new DocumentReference("xwiki", "space", "myPage"));
     }
 
     @Test
     void testNotEnoughNonNullObjectsOnSpace() throws XWikiException, ComponentLookupException
     {
-        notEnoughRecyclableObjects(new SpaceReference("xwiki", "Space", "MySpace"), XWIKI_GLOBAL_RIGHTS_CLASS,
-            new DocumentReference("xwiki", Arrays.asList("Space", "MySpace"), XWIKI_WEB_PREFERENCES));
+        notEnoughRecyclableObjects(new SpaceReference("xwiki", "Space", "MySpace"),
+            DefaultRightsWriter.XWIKI_GLOBAL_RIGHTS_CLASS,
+            new DocumentReference("xwiki", Arrays.asList("Space", "MySpace"),
+                RulesObjectWriter.XWIKI_WEB_PREFERENCES));
     }
 
     private void replaceWithSingleRule(EntityReference whereToSaveRules, EntityReference rightsClassReference,
@@ -599,16 +614,16 @@ public class RecyclingStrategyRightsWriterTest extends AbstractRightsWriterTest
             RuleState.ALLOW);
 
         DocumentReference testedDocReference =
-            new DocumentReference("xwiki", Arrays.asList("Space", "MySpace"), XWIKI_WEB_PREFERENCES);
+            new DocumentReference("xwiki", Arrays.asList("Space", "MySpace"), RulesObjectWriter.XWIKI_WEB_PREFERENCES);
 
         rightsWriter.saveRules(Collections.singletonList(fullySetRule), saveOn, "recycling");
 
         XWikiDocument testedDoc = oldcore.getSpyXWiki().getDocument(testedDocReference, oldcore.getXWikiContext());
         assertNotNull(testedDoc);
-        assertEquals(1, testedDoc.getXObjects(XWIKI_GLOBAL_RIGHTS_CLASS).size());
+        assertEquals(1, testedDoc.getXObjects(DefaultRightsWriter.XWIKI_GLOBAL_RIGHTS_CLASS).size());
 
         // before
-        BaseObject testedObj = testedDoc.getXObject(XWIKI_GLOBAL_RIGHTS_CLASS);
+        BaseObject testedObj = testedDoc.getXObject(DefaultRightsWriter.XWIKI_GLOBAL_RIGHTS_CLASS);
         assertObject("XWiki.XWikiAllGroup", "XWiki.Admin", "view", 1, testedObj);
 
         // replace rule with another rule, that has a null subject (e.g. users)
@@ -620,10 +635,10 @@ public class RecyclingStrategyRightsWriterTest extends AbstractRightsWriterTest
 
         testedDoc = oldcore.getSpyXWiki().getDocument(testedDocReference, oldcore.getXWikiContext());
         assertNotNull(testedDoc);
-        assertEquals(1, testedDoc.getXObjects(XWIKI_GLOBAL_RIGHTS_CLASS).size());
+        assertEquals(1, testedDoc.getXObjects(DefaultRightsWriter.XWIKI_GLOBAL_RIGHTS_CLASS).size());
 
         // after: the users are empty, group stays the same as it wasn't changed and rights change also
-        testedObj = testedDoc.getXObject(XWIKI_GLOBAL_RIGHTS_CLASS);
+        testedObj = testedDoc.getXObject(DefaultRightsWriter.XWIKI_GLOBAL_RIGHTS_CLASS);
         assertObject("XWiki.XWikiAllGroup", "", "edit", 1, testedObj);
     }
 
@@ -644,16 +659,16 @@ public class RecyclingStrategyRightsWriterTest extends AbstractRightsWriterTest
             RuleState.ALLOW);
 
         DocumentReference testedDocReference =
-            new DocumentReference("xwiki", Arrays.asList("Space", "MySpace"), XWIKI_WEB_PREFERENCES);
+            new DocumentReference("xwiki", Arrays.asList("Space", "MySpace"), RulesObjectWriter.XWIKI_WEB_PREFERENCES);
 
         rightsWriter.saveRules(Collections.singletonList(fullySetRule), saveOn, "recycling");
 
         XWikiDocument testedDoc = oldcore.getSpyXWiki().getDocument(testedDocReference, oldcore.getXWikiContext());
         assertNotNull(testedDoc);
-        assertEquals(1, testedDoc.getXObjects(XWIKI_GLOBAL_RIGHTS_CLASS).size());
+        assertEquals(1, testedDoc.getXObjects(DefaultRightsWriter.XWIKI_GLOBAL_RIGHTS_CLASS).size());
 
         // before
-        BaseObject testedObj = testedDoc.getXObject(XWIKI_GLOBAL_RIGHTS_CLASS);
+        BaseObject testedObj = testedDoc.getXObject(DefaultRightsWriter.XWIKI_GLOBAL_RIGHTS_CLASS);
         assertObject("XWiki.XWikiAllGroup", "XWiki.Admin", "view", 1, testedObj);
 
         // replace rule with another rule, that has a null subject (e.g. users)
@@ -665,10 +680,10 @@ public class RecyclingStrategyRightsWriterTest extends AbstractRightsWriterTest
 
         testedDoc = oldcore.getSpyXWiki().getDocument(testedDocReference, oldcore.getXWikiContext());
         assertNotNull(testedDoc);
-        assertEquals(1, testedDoc.getXObjects(XWIKI_GLOBAL_RIGHTS_CLASS).size());
+        assertEquals(1, testedDoc.getXObjects(DefaultRightsWriter.XWIKI_GLOBAL_RIGHTS_CLASS).size());
 
         // after: the groups are empty, user stays the same as it wasn't changed and rights change also
-        testedObj = testedDoc.getXObject(XWIKI_GLOBAL_RIGHTS_CLASS);
+        testedObj = testedDoc.getXObject(DefaultRightsWriter.XWIKI_GLOBAL_RIGHTS_CLASS);
         assertObject("", "XWiki.Admin", "edit", 1, testedObj);
     }
 
@@ -689,16 +704,16 @@ public class RecyclingStrategyRightsWriterTest extends AbstractRightsWriterTest
             RuleState.ALLOW);
 
         DocumentReference testedDocReference =
-            new DocumentReference("xwiki", Arrays.asList("Space", "MySpace"), XWIKI_WEB_PREFERENCES);
+            new DocumentReference("xwiki", Arrays.asList("Space", "MySpace"), RulesObjectWriter.XWIKI_WEB_PREFERENCES);
 
         rightsWriter.saveRules(Collections.singletonList(fullySetRule), saveOn, "recycling");
 
         XWikiDocument testedDoc = oldcore.getSpyXWiki().getDocument(testedDocReference, oldcore.getXWikiContext());
         assertNotNull(testedDoc);
-        assertEquals(1, testedDoc.getXObjects(XWIKI_GLOBAL_RIGHTS_CLASS).size());
+        assertEquals(1, testedDoc.getXObjects(DefaultRightsWriter.XWIKI_GLOBAL_RIGHTS_CLASS).size());
 
         // before
-        BaseObject testedObj = testedDoc.getXObject(XWIKI_GLOBAL_RIGHTS_CLASS);
+        BaseObject testedObj = testedDoc.getXObject(DefaultRightsWriter.XWIKI_GLOBAL_RIGHTS_CLASS);
         assertObject("XWiki.XWikiAllGroup", "XWiki.Admin", "view", 1, testedObj);
 
         // replace rule with another rule, that has an empty list subject (e.g. groups)
@@ -710,10 +725,10 @@ public class RecyclingStrategyRightsWriterTest extends AbstractRightsWriterTest
 
         testedDoc = oldcore.getSpyXWiki().getDocument(testedDocReference, oldcore.getXWikiContext());
         assertNotNull(testedDoc);
-        assertEquals(1, testedDoc.getXObjects(XWIKI_GLOBAL_RIGHTS_CLASS).size());
+        assertEquals(1, testedDoc.getXObjects(DefaultRightsWriter.XWIKI_GLOBAL_RIGHTS_CLASS).size());
 
         // after: the groups are empty, user and rights change, as they changed in the rule
-        testedObj = testedDoc.getXObject(XWIKI_GLOBAL_RIGHTS_CLASS);
+        testedObj = testedDoc.getXObject(DefaultRightsWriter.XWIKI_GLOBAL_RIGHTS_CLASS);
         assertObject("", "XWiki.Administrator", "edit", 1, testedObj);
     }
 
@@ -734,16 +749,16 @@ public class RecyclingStrategyRightsWriterTest extends AbstractRightsWriterTest
             RuleState.ALLOW);
 
         DocumentReference testedDocReference =
-            new DocumentReference("xwiki", Arrays.asList("Space", "MySpace"), XWIKI_WEB_PREFERENCES);
+            new DocumentReference("xwiki", Arrays.asList("Space", "MySpace"), RulesObjectWriter.XWIKI_WEB_PREFERENCES);
 
         rightsWriter.saveRules(Collections.singletonList(fullySetRule), saveOn, "recycling");
 
         XWikiDocument testedDoc = oldcore.getSpyXWiki().getDocument(testedDocReference, oldcore.getXWikiContext());
         assertNotNull(testedDoc);
-        assertEquals(1, testedDoc.getXObjects(XWIKI_GLOBAL_RIGHTS_CLASS).size());
+        assertEquals(1, testedDoc.getXObjects(DefaultRightsWriter.XWIKI_GLOBAL_RIGHTS_CLASS).size());
 
         // before
-        BaseObject testedObj = testedDoc.getXObject(XWIKI_GLOBAL_RIGHTS_CLASS);
+        BaseObject testedObj = testedDoc.getXObject(DefaultRightsWriter.XWIKI_GLOBAL_RIGHTS_CLASS);
         assertObject("XWiki.XWikiAllGroup", "XWiki.Admin", "view", 1, testedObj);
 
         // replace rule with another rule, that has a null subject (e.g. users)
@@ -755,10 +770,10 @@ public class RecyclingStrategyRightsWriterTest extends AbstractRightsWriterTest
 
         testedDoc = oldcore.getSpyXWiki().getDocument(testedDocReference, oldcore.getXWikiContext());
         assertNotNull(testedDoc);
-        assertEquals(1, testedDoc.getXObjects(XWIKI_GLOBAL_RIGHTS_CLASS).size());
+        assertEquals(1, testedDoc.getXObjects(DefaultRightsWriter.XWIKI_GLOBAL_RIGHTS_CLASS).size());
 
         // after: all stays the same but rights are emptied.
-        testedObj = testedDoc.getXObject(XWIKI_GLOBAL_RIGHTS_CLASS);
+        testedObj = testedDoc.getXObject(DefaultRightsWriter.XWIKI_GLOBAL_RIGHTS_CLASS);
         assertObject("XWiki.XWikiAllGroup", "XWiki.Admin", "", 1, testedObj);
     }
 
@@ -779,16 +794,16 @@ public class RecyclingStrategyRightsWriterTest extends AbstractRightsWriterTest
             RuleState.DENY);
 
         DocumentReference testedDocReference =
-            new DocumentReference("xwiki", Arrays.asList("Space", "MySpace"), XWIKI_WEB_PREFERENCES);
+            new DocumentReference("xwiki", Arrays.asList("Space", "MySpace"), RulesObjectWriter.XWIKI_WEB_PREFERENCES);
 
         rightsWriter.saveRules(Collections.singletonList(fullySetRule), saveOn, "recycling");
 
         XWikiDocument testedDoc = oldcore.getSpyXWiki().getDocument(testedDocReference, oldcore.getXWikiContext());
         assertNotNull(testedDoc);
-        assertEquals(1, testedDoc.getXObjects(XWIKI_GLOBAL_RIGHTS_CLASS).size());
+        assertEquals(1, testedDoc.getXObjects(DefaultRightsWriter.XWIKI_GLOBAL_RIGHTS_CLASS).size());
 
         // before
-        BaseObject testedObj = testedDoc.getXObject(XWIKI_GLOBAL_RIGHTS_CLASS);
+        BaseObject testedObj = testedDoc.getXObject(DefaultRightsWriter.XWIKI_GLOBAL_RIGHTS_CLASS);
         assertObject("XWiki.XWikiAllGroup", "XWiki.Admin", "view", 0, testedObj);
 
         // replace rule with another rule, that has a null subject (e.g. users)
@@ -801,10 +816,10 @@ public class RecyclingStrategyRightsWriterTest extends AbstractRightsWriterTest
 
         testedDoc = oldcore.getSpyXWiki().getDocument(testedDocReference, oldcore.getXWikiContext());
         assertNotNull(testedDoc);
-        assertEquals(1, testedDoc.getXObjects(XWIKI_GLOBAL_RIGHTS_CLASS).size());
+        assertEquals(1, testedDoc.getXObjects(DefaultRightsWriter.XWIKI_GLOBAL_RIGHTS_CLASS).size());
 
         // all
-        testedObj = testedDoc.getXObject(XWIKI_GLOBAL_RIGHTS_CLASS);
+        testedObj = testedDoc.getXObject(DefaultRightsWriter.XWIKI_GLOBAL_RIGHTS_CLASS);
         assertObject("XWiki.XWikiAllGroup", "XWiki.Admin", "view", 1, testedObj);
     }
 }

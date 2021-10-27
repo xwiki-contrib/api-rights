@@ -30,7 +30,6 @@ import org.xwiki.component.annotation.Component;
 import org.xwiki.component.manager.ComponentLookupException;
 import org.xwiki.component.manager.ComponentManager;
 import org.xwiki.contrib.rights.RulesObjectWriter;
-import org.xwiki.model.EntityType;
 import org.xwiki.model.reference.DocumentReference;
 import org.xwiki.model.reference.EntityReference;
 import org.xwiki.model.reference.SpaceReference;
@@ -41,6 +40,8 @@ import com.xpn.xwiki.XWiki;
 import com.xpn.xwiki.XWikiContext;
 import com.xpn.xwiki.XWikiException;
 import com.xpn.xwiki.doc.XWikiDocument;
+import com.xpn.xwiki.internal.mandatory.XWikiGlobalRightsDocumentInitializer;
+import com.xpn.xwiki.internal.mandatory.XWikiRightsDocumentInitializer;
 
 /**
  * @version $Id$
@@ -49,17 +50,11 @@ import com.xpn.xwiki.doc.XWikiDocument;
 @Singleton
 public class DefaultRightsWriter extends AbstractRightsWriter
 {
-    private static final String XWIKI_SPACE = "XWiki";
+    static final String XWIKI_SPACE = XWiki.SYSTEM_SPACE;
 
-    private static final EntityReference XWIKI_RIGHTS_CLASS =
-        new EntityReference("XWikiRights", EntityType.DOCUMENT, new EntityReference(XWIKI_SPACE, EntityType.SPACE));
+    static final EntityReference XWIKI_RIGHTS_CLASS = XWikiRightsDocumentInitializer.CLASS_REFERENCE;
 
-    private static final EntityReference XWIKI_GLOBAL_RIGHTS_CLASS = new EntityReference("XWikiGlobalRights",
-        EntityType.DOCUMENT, new EntityReference(XWIKI_SPACE, EntityType.SPACE));
-
-    private static final String XWIKI_WEB_PREFERENCES = "WebPreferences";
-
-    private static final String XWIKI_PREFERENCES = "XWikiPreferences";
+    static final EntityReference XWIKI_GLOBAL_RIGHTS_CLASS = XWikiGlobalRightsDocumentInitializer.CLASS_REFERENCE;
 
     @Inject
     @Named("recycling")
@@ -100,12 +95,13 @@ public class DefaultRightsWriter extends AbstractRightsWriter
             EntityReference rightsClassReference;
             switch (reference.getType()) {
                 case WIKI:
-                    documentReference = new DocumentReference(XWIKI_PREFERENCES,
+                    documentReference = new DocumentReference(RulesObjectWriter.XWIKI_PREFERENCES,
                         new SpaceReference(XWIKI_SPACE, new WikiReference(reference)));
                     rightsClassReference = XWIKI_GLOBAL_RIGHTS_CLASS;
                     break;
                 case SPACE:
-                    documentReference = new DocumentReference(XWIKI_WEB_PREFERENCES, new SpaceReference(reference));
+                    documentReference = new DocumentReference(RulesObjectWriter.XWIKI_WEB_PREFERENCES,
+                        new SpaceReference(reference));
                     rightsClassReference = XWIKI_GLOBAL_RIGHTS_CLASS;
                     break;
                 case DOCUMENT:

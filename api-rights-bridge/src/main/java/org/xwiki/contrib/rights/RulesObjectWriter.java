@@ -38,6 +38,15 @@ import com.xpn.xwiki.doc.XWikiDocument;
 public interface RulesObjectWriter
 {
     /**
+     * Name of the page where to store space preferences.
+     */
+    String XWIKI_WEB_PREFERENCES = "WebPreferences";
+    /**
+     * Name of the page where to store wiki preferences.
+     */
+    String XWIKI_PREFERENCES = "XWikiPreferences";
+
+    /**
      * Persists the passed rules as objects on the passed document, according to the strategy specific to each
      * implementation.
      * 

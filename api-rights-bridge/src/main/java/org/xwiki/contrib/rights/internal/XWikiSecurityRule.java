@@ -37,7 +37,6 @@ import org.xwiki.security.authorization.ReadableSecurityRule;
 import org.xwiki.security.authorization.Right;
 import org.xwiki.security.authorization.RightSet;
 import org.xwiki.security.authorization.RuleState;
-import org.xwiki.security.authorization.SecurityRule;
 import org.xwiki.security.internal.XWikiConstants;
 import org.xwiki.text.XWikiToStringStyle;
 
@@ -272,7 +271,7 @@ public class XWikiSecurityRule implements ReadableSecurityRule
      * @return a newly created security rule, marked as persisted (since it's based on the given BaseObject parameter)
      * @throws IllegalArgumentException if the source object for the rules is badly formed.
      */
-    static SecurityRule createNewRule(BaseObject obj, DocumentReferenceResolver<String> resolver,
+    static XWikiSecurityRule createNewRule(BaseObject obj, DocumentReferenceResolver<String> resolver,
         WikiReference wikiReference, boolean disableEditRight) throws IllegalArgumentException
     {
         XWikiSecurityRule rule = new XWikiSecurityRule(obj, resolver, wikiReference, disableEditRight);
