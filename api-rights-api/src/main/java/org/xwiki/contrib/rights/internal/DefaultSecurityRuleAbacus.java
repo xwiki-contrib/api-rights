@@ -109,7 +109,7 @@ public class DefaultSecurityRuleAbacus implements SecurityRuleAbacus
     private boolean isSameRuleUpdate(ReadableSecurityRule previousRule, ReadableSecurityRule currentRule)
     {
         boolean previousSubjectIsGroup = previousRule.getUsers().isEmpty();
-        boolean currentSubjectIsGroup = previousRule.getUsers().isEmpty();
+        boolean currentSubjectIsGroup = currentRule.getUsers().isEmpty();
         if (previousSubjectIsGroup == currentSubjectIsGroup && previousRule.getState() == currentRule.getState()) {
             if (previousSubjectIsGroup) {
                 return previousRule.getGroups().equals(currentRule.getGroups());
