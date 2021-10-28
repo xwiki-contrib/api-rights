@@ -27,10 +27,11 @@ import javax.inject.Inject;
 import javax.inject.Named;
 import javax.inject.Singleton;
 
-import org.apache.commons.lang3.tuple.Pair;
 import org.xwiki.component.annotation.Component;
 import org.xwiki.contrib.rights.RightUpdatedEvent;
 import org.xwiki.contrib.rights.RulesObjectWriter;
+import org.xwiki.contrib.rights.SecurityRuleAbacus;
+import org.xwiki.contrib.rights.SecurityRuleDiff;
 import org.xwiki.model.reference.DocumentReference;
 import org.xwiki.model.reference.DocumentReferenceResolver;
 import org.xwiki.model.reference.EntityReference;
@@ -72,6 +73,9 @@ public class RightObjectEventListener extends AbstractDocumentEventListener
     @Inject
     private SecurityReferenceFactory securityReferenceFactory;
 
+    @Inject
+    private SecurityRuleAbacus securityRuleAbacus;
+
     /**
      * Default constructor.
      */
@@ -110,12 +114,12 @@ public class RightObjectEventListener extends AbstractDocumentEventListener
         XWikiDocument currentDocument = (XWikiDocument) source;
         XWikiDocument previousDocument = currentDocument.getOriginalDocument();
 
-        List<ReadableSecurityRule> currentRules = this.getRules(currentDocument, isGlobalRight);
         List<ReadableSecurityRule> previousRules = this.getRules(previousDocument, isGlobalRight);
+        List<ReadableSecurityRule> currentRules = this.getRules(currentDocument, isGlobalRight);
 
+        List<SecurityRuleDiff> securityRuleDiffs = this.securityRuleAbacus.computeRuleDiff(previousRules, currentRules);
         SecurityReference securityReference = this.securityReferenceFactory.newEntityReference(sourceEntityReference);
-        this.observationManager.notify(new RightUpdatedEvent(), securityReference,
-            Pair.of(previousRules, currentRules));
+        this.observationManager.notify(new RightUpdatedEvent(), securityReference, securityRuleDiffs);
     }
 
     private List<ReadableSecurityRule> getRules(XWikiDocument document, boolean globalOnly)

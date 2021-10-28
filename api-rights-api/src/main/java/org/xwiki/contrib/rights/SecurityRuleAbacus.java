@@ -23,6 +23,7 @@ import java.util.List;
 
 import org.xwiki.component.annotation.Role;
 import org.xwiki.security.authorization.ReadableSecurityRule;
+import org.xwiki.stability.Unstable;
 
 /**
  * The security abacus provides functions in order to perform various operations on security rules.
@@ -44,4 +45,24 @@ public interface SecurityRuleAbacus
      * @return The normalized list of rules
      */
     List<ReadableSecurityRule> normalizeRulesBySubject(List<ReadableSecurityRule> rules);
+
+    /**
+     * Compute a diff between the previous rules and the current ones.
+     * This diff is computed by first normalizing the rules (see {@link #normalizeRulesBySubject(List)} and then by
+     * comparing them by couple (subject, state).
+     * Then this diff implementation will never return any {@link SecurityRuleDiff} containing a
+     * {@link org.xwiki.contrib.rights.SecurityRuleDiff.PropertyType} other than
+     * {@link org.xwiki.contrib.rights.SecurityRuleDiff.PropertyType#RIGHTS} in case of
+     * {@link org.xwiki.contrib.rights.SecurityRuleDiff.ChangeType#RULE_UPDATED}. For all other kind of changes, the
+     * diff will compute added and deleted changes. Also note that the returned {@link SecurityRuleDiff} will contain
+     * always the normalized rules.
+     *
+     * @param previousRules the previous rules to be compared
+     * @param currentRules the current rules to be compared
+     * @return a list of {@link SecurityRuleDiff} showing the differences between the given rules, after normalization.
+     * @since 2.0
+     */
+    @Unstable
+    List<SecurityRuleDiff> computeRuleDiff(List<ReadableSecurityRule> previousRules,
+        List<ReadableSecurityRule> currentRules);
 }

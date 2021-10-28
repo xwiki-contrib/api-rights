@@ -30,6 +30,8 @@ import org.apache.commons.lang3.tuple.Pair;
 import org.junit.jupiter.api.Test;
 import org.xwiki.contrib.rights.RightUpdatedEvent;
 import org.xwiki.contrib.rights.RulesObjectWriter;
+import org.xwiki.contrib.rights.SecurityRuleAbacus;
+import org.xwiki.contrib.rights.SecurityRuleDiff;
 import org.xwiki.model.reference.DocumentReference;
 import org.xwiki.model.reference.DocumentReferenceResolver;
 import org.xwiki.model.reference.LocalDocumentReference;
@@ -38,9 +40,9 @@ import org.xwiki.model.reference.WikiReference;
 import org.xwiki.observation.ObservationManager;
 import org.xwiki.security.SecurityReference;
 import org.xwiki.security.SecurityReferenceFactory;
+import org.xwiki.security.authorization.ReadableSecurityRule;
 import org.xwiki.security.authorization.Right;
 import org.xwiki.security.authorization.RuleState;
-import org.xwiki.security.authorization.SecurityRule;
 import org.xwiki.security.internal.XWikiConstants;
 import org.xwiki.test.junit5.mockito.ComponentTest;
 import org.xwiki.test.junit5.mockito.InjectMockComponents;
@@ -77,6 +79,9 @@ class RightsObjectEventListenerTest
 
     @MockComponent
     private SecurityReferenceFactory securityReferenceFactory;
+
+    @MockComponent
+    private SecurityRuleAbacus securityRuleAbacus;
 
     private XWikiSecurityRule mockRightObject(BaseObject baseObjectMock, RuleState state, List<Right> rights,
         Pair<String, List<DocumentReference>> userReferences,
@@ -152,7 +157,7 @@ class RightsObjectEventListenerTest
         when(this.documentReferenceResolver.resolve("Bar", wikiReference)).thenReturn(userBarRef);
         when(this.documentReferenceResolver.resolve("Buz", wikiReference)).thenReturn(userBuzRef);
 
-        List<SecurityRule> expectedPreviousRules = Arrays.asList(
+        List<ReadableSecurityRule> expectedPreviousRules = Arrays.asList(
             mockRightObject(rightObj1, RuleState.ALLOW, Arrays.asList(Right.VIEW, Right.EDIT),
                 Pair.of("Buz", Collections.singletonList(userBuzRef)),
                 Pair.of("groupA", Collections.singletonList(groupARef))),
@@ -164,7 +169,7 @@ class RightsObjectEventListenerTest
                 Pair.of("groupB,groupC", Arrays.asList(groupBRef, groupCRef)))
         );
 
-        List<SecurityRule> expectedCurrentRules = Arrays.asList(
+        List<ReadableSecurityRule> expectedCurrentRules = Arrays.asList(
             mockRightObject(null, RuleState.ALLOW, Arrays.asList(Right.VIEW, Right.EDIT),
                 Pair.of("Buz", Collections.singletonList(userBuzRef)),
                 Pair.of("groupA", Collections.singletonList(groupARef))),
@@ -180,9 +185,13 @@ class RightsObjectEventListenerTest
         when(this.securityReferenceFactory.newEntityReference(sourceDocReference))
             .thenReturn(expectedSecurityReference);
 
+        List<SecurityRuleDiff> diffList = mock(List.class);
+        when(this.securityRuleAbacus.computeRuleDiff(expectedPreviousRules, expectedCurrentRules))
+            .thenReturn(diffList);
         this.listener.processLocalEvent(event, source, null);
-        verify(this.observationManager).notify(any(RightUpdatedEvent.class), eq(expectedSecurityReference),
-            eq(Pair.of(expectedPreviousRules, expectedCurrentRules)));
+        verify(this.securityRuleAbacus).computeRuleDiff(expectedPreviousRules, expectedCurrentRules);
+        verify(this.observationManager)
+            .notify(any(RightUpdatedEvent.class), eq(expectedSecurityReference), eq(diffList));
     }
 
     @Test
@@ -238,7 +247,7 @@ class RightsObjectEventListenerTest
         when(this.documentReferenceResolver.resolve("Bar", wikiReference)).thenReturn(userBarRef);
         when(this.documentReferenceResolver.resolve("Buz", wikiReference)).thenReturn(userBuzRef);
 
-        List<SecurityRule> expectedPreviousRules = Arrays.asList(
+        List<ReadableSecurityRule> expectedPreviousRules = Arrays.asList(
             mockRightObject(rightObj1, RuleState.ALLOW, Arrays.asList(Right.VIEW, Right.EDIT),
                 Pair.of("Buz", Collections.singletonList(userBuzRef)),
                 Pair.of("groupA", Collections.singletonList(groupARef))),
@@ -247,7 +256,7 @@ class RightsObjectEventListenerTest
                 Pair.of("", Collections.emptyList()))
         );
 
-        List<SecurityRule> expectedCurrentRules = Arrays.asList(
+        List<ReadableSecurityRule> expectedCurrentRules = Arrays.asList(
             mockRightObject(null, RuleState.ALLOW, Arrays.asList(Right.VIEW, Right.EDIT),
                 Pair.of("Buz", Collections.singletonList(userBuzRef)),
                 Pair.of("groupA", Collections.singletonList(groupARef))),
@@ -266,9 +275,13 @@ class RightsObjectEventListenerTest
         when(this.securityReferenceFactory.newEntityReference(sourceDocReference))
             .thenReturn(expectedSecurityReference);
 
+        List<SecurityRuleDiff> diffList = mock(List.class);
+        when(this.securityRuleAbacus.computeRuleDiff(expectedPreviousRules, expectedCurrentRules))
+            .thenReturn(diffList);
         this.listener.processLocalEvent(event, source, null);
-        verify(this.observationManager).notify(any(RightUpdatedEvent.class), eq(expectedSecurityReference),
-            eq(Pair.of(expectedPreviousRules, expectedCurrentRules)));
+        verify(this.securityRuleAbacus).computeRuleDiff(expectedPreviousRules, expectedCurrentRules);
+        verify(this.observationManager)
+            .notify(any(RightUpdatedEvent.class), eq(expectedSecurityReference), eq(diffList));
     }
 
     @Test
@@ -325,7 +338,7 @@ class RightsObjectEventListenerTest
         when(this.documentReferenceResolver.resolve("Bar", wikiReference)).thenReturn(userBarRef);
         when(this.documentReferenceResolver.resolve("Buz", wikiReference)).thenReturn(userBuzRef);
 
-        List<SecurityRule> expectedPreviousRules = Arrays.asList(
+        List<ReadableSecurityRule> expectedPreviousRules = Arrays.asList(
             mockRightObject(rightObj1, RuleState.ALLOW, Arrays.asList(Right.VIEW, Right.EDIT),
                 Pair.of("Buz", Collections.singletonList(userBuzRef)),
                 Pair.of("groupA", Collections.singletonList(groupARef))),
@@ -337,7 +350,7 @@ class RightsObjectEventListenerTest
                 Pair.of("groupB,groupC", Arrays.asList(groupBRef, groupCRef)))
         );
 
-        List<SecurityRule> expectedCurrentRules = Arrays.asList(
+        List<ReadableSecurityRule> expectedCurrentRules = Arrays.asList(
             mockRightObject(null, RuleState.DENY, Collections.singletonList(Right.SCRIPT),
                 Pair.of("Foo,Bar", Arrays.asList(userFooRef, userBarRef)),
                 Pair.of("", Collections.emptyList())),
@@ -353,9 +366,13 @@ class RightsObjectEventListenerTest
         when(this.securityReferenceFactory.newEntityReference(sourceDocReference))
             .thenReturn(expectedSecurityReference);
 
+        List<SecurityRuleDiff> diffList = mock(List.class);
+        when(this.securityRuleAbacus.computeRuleDiff(expectedPreviousRules, expectedCurrentRules))
+            .thenReturn(diffList);
         this.listener.processLocalEvent(event, source, null);
-        verify(this.observationManager).notify(any(RightUpdatedEvent.class), eq(expectedSecurityReference),
-            eq(Pair.of(expectedPreviousRules, expectedCurrentRules)));
+        verify(this.securityRuleAbacus).computeRuleDiff(expectedPreviousRules, expectedCurrentRules);
+        verify(this.observationManager)
+            .notify(any(RightUpdatedEvent.class), eq(expectedSecurityReference), eq(diffList));
     }
 
     @Test
@@ -414,7 +431,7 @@ class RightsObjectEventListenerTest
         when(this.documentReferenceResolver.resolve("Bar", wikiReference)).thenReturn(userBarRef);
         when(this.documentReferenceResolver.resolve("Buz", wikiReference)).thenReturn(userBuzRef);
 
-        List<SecurityRule> expectedPreviousRules = Arrays.asList(
+        List<ReadableSecurityRule> expectedPreviousRules = Arrays.asList(
             mockRightObject(rightObj1, RuleState.ALLOW, Arrays.asList(Right.VIEW, Right.EDIT),
                 Pair.of("Buz", Collections.singletonList(userBuzRef)),
                 Pair.of("groupA", Collections.singletonList(groupARef))),
@@ -426,7 +443,7 @@ class RightsObjectEventListenerTest
                 Pair.of("groupB,groupC", Arrays.asList(groupBRef, groupCRef)))
         );
 
-        List<SecurityRule> expectedCurrentRules = Arrays.asList(
+        List<ReadableSecurityRule> expectedCurrentRules = Arrays.asList(
             mockRightObject(null, RuleState.ALLOW, Arrays.asList(Right.VIEW, Right.EDIT),
                 Pair.of("Buz", Collections.singletonList(userBuzRef)),
                 Pair.of("groupA", Collections.singletonList(groupARef))),
@@ -442,9 +459,13 @@ class RightsObjectEventListenerTest
         when(this.securityReferenceFactory.newEntityReference(sourceDocReference))
             .thenReturn(expectedSecurityReference);
 
+        List<SecurityRuleDiff> diffList = mock(List.class);
+        when(this.securityRuleAbacus.computeRuleDiff(expectedPreviousRules, expectedCurrentRules))
+            .thenReturn(diffList);
         this.listener.processLocalEvent(event, source, null);
-        verify(this.observationManager).notify(any(RightUpdatedEvent.class), eq(expectedSecurityReference),
-            eq(Pair.of(expectedPreviousRules, expectedCurrentRules)));
+        verify(this.securityRuleAbacus).computeRuleDiff(expectedPreviousRules, expectedCurrentRules);
+        verify(this.observationManager)
+            .notify(any(RightUpdatedEvent.class), eq(expectedSecurityReference), eq(diffList));
     }
 
     @Test
@@ -500,7 +521,7 @@ class RightsObjectEventListenerTest
         when(this.documentReferenceResolver.resolve("Bar", wikiReference)).thenReturn(userBarRef);
         when(this.documentReferenceResolver.resolve("Buz", wikiReference)).thenReturn(userBuzRef);
 
-        List<SecurityRule> expectedPreviousRules = Arrays.asList(
+        List<ReadableSecurityRule> expectedPreviousRules = Arrays.asList(
             mockRightObject(rightObj1, RuleState.ALLOW, Arrays.asList(Right.VIEW, Right.EDIT),
                 Pair.of("Buz", Collections.singletonList(userBuzRef)),
                 Pair.of("groupA", Collections.singletonList(groupARef))),
@@ -509,7 +530,7 @@ class RightsObjectEventListenerTest
                 Pair.of("", Collections.emptyList()))
         );
 
-        List<SecurityRule> expectedCurrentRules = Arrays.asList(
+        List<ReadableSecurityRule> expectedCurrentRules = Arrays.asList(
             mockRightObject(null, RuleState.ALLOW, Arrays.asList(Right.VIEW, Right.EDIT),
                 Pair.of("Buz", Collections.singletonList(userBuzRef)),
                 Pair.of("groupA", Collections.singletonList(groupARef))),
@@ -526,9 +547,13 @@ class RightsObjectEventListenerTest
         when(this.securityReferenceFactory.newEntityReference(new SpaceReference("SomeSpace", wikiReference)))
             .thenReturn(expectedSecurityReference);
 
+        List<SecurityRuleDiff> diffList = mock(List.class);
+        when(this.securityRuleAbacus.computeRuleDiff(expectedPreviousRules, expectedCurrentRules))
+            .thenReturn(diffList);
         this.listener.processLocalEvent(event, source, null);
-        verify(this.observationManager).notify(any(RightUpdatedEvent.class), eq(expectedSecurityReference),
-            eq(Pair.of(expectedPreviousRules, expectedCurrentRules)));
+        verify(this.securityRuleAbacus).computeRuleDiff(expectedPreviousRules, expectedCurrentRules);
+        verify(this.observationManager)
+            .notify(any(RightUpdatedEvent.class), eq(expectedSecurityReference), eq(diffList));
     }
 
     @Test
@@ -585,7 +610,7 @@ class RightsObjectEventListenerTest
         when(this.documentReferenceResolver.resolve("Bar", wikiReference)).thenReturn(userBarRef);
         when(this.documentReferenceResolver.resolve("Buz", wikiReference)).thenReturn(userBuzRef);
 
-        List<SecurityRule> expectedPreviousRules = Arrays.asList(
+        List<ReadableSecurityRule> expectedPreviousRules = Arrays.asList(
             mockRightObject(rightObj1, RuleState.ALLOW, Arrays.asList(Right.VIEW, Right.EDIT),
                 Pair.of("Buz", Collections.singletonList(userBuzRef)),
                 Pair.of("groupA", Collections.singletonList(groupARef))),
@@ -597,7 +622,7 @@ class RightsObjectEventListenerTest
                 Pair.of("groupB,groupC", Arrays.asList(groupBRef, groupCRef)))
         );
 
-        List<SecurityRule> expectedCurrentRules = Arrays.asList(
+        List<ReadableSecurityRule> expectedCurrentRules = Arrays.asList(
             mockRightObject(null, RuleState.DENY, Collections.singletonList(Right.SCRIPT),
                 Pair.of("Foo,Bar", Arrays.asList(userFooRef, userBarRef)),
                 Pair.of("", Collections.emptyList())),
@@ -611,8 +636,12 @@ class RightsObjectEventListenerTest
         when(this.securityReferenceFactory.newEntityReference(wikiReference))
             .thenReturn(expectedSecurityReference);
 
+        List<SecurityRuleDiff> diffList = mock(List.class);
+        when(this.securityRuleAbacus.computeRuleDiff(expectedPreviousRules, expectedCurrentRules))
+            .thenReturn(diffList);
         this.listener.processLocalEvent(event, source, null);
-        verify(this.observationManager).notify(any(RightUpdatedEvent.class), eq(expectedSecurityReference),
-            eq(Pair.of(expectedPreviousRules, expectedCurrentRules)));
+        verify(this.securityRuleAbacus).computeRuleDiff(expectedPreviousRules, expectedCurrentRules);
+        verify(this.observationManager)
+            .notify(any(RightUpdatedEvent.class), eq(expectedSecurityReference), eq(diffList));
     }
 }

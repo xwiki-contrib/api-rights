@@ -25,6 +25,7 @@ import java.util.List;
 
 import org.junit.jupiter.api.Test;
 import org.xwiki.contrib.rights.RightsReader;
+import org.xwiki.contrib.rights.SecurityRuleDiff;
 import org.xwiki.model.internal.DefaultModelConfiguration;
 import org.xwiki.model.internal.reference.DefaultEntityReferenceProvider;
 import org.xwiki.model.internal.reference.DefaultStringEntityReferenceSerializer;
@@ -410,5 +411,162 @@ public class DefaultSecurityRuleAbacusTest extends AbstractRightsTest
             Arrays.asList(Right.EDIT),
             RuleState.DENY
         );
+    }
+
+    @Test
+    void computeDiff_changeRight()
+    {
+        List<ReadableSecurityRule> previousRules = Arrays.asList(
+            // gives view to both admin group and all group
+            new WritableSecurityRuleImpl(
+                Arrays.asList(
+                    new DocumentReference("xwiki", "XWiki", "XWikiAdminGroup"),
+                    new DocumentReference("xwiki", "XWiki", "XWikiAllGroup")
+                ),
+                Collections.emptyList(),
+                new RightSet(Right.VIEW),
+                RuleState.ALLOW
+            ),
+            // and then edit and comment only to admins
+            new WritableSecurityRuleImpl(
+                Arrays.asList(new DocumentReference("xwiki", "XWiki", "XWikiAdminGroup")),
+                Collections.emptyList(),
+                new RightSet(Right.EDIT, Right.COMMENT),
+                RuleState.ALLOW
+            )
+        );
+
+        List<ReadableSecurityRule> currentRules = Arrays.asList(
+            // gives view to both admin group and all group
+            new WritableSecurityRuleImpl(
+                Arrays.asList(
+                    new DocumentReference("xwiki", "XWiki", "XWikiAdminGroup"),
+                    new DocumentReference("xwiki", "XWiki", "XWikiAllGroup")
+                ),
+                Collections.emptyList(),
+                new RightSet(Right.VIEW, Right.EDIT),
+                RuleState.ALLOW
+            ),
+            // and then edit and comment only to admins
+            new WritableSecurityRuleImpl(
+                Arrays.asList(new DocumentReference("xwiki", "XWiki", "XWikiAdminGroup")),
+                Collections.emptyList(),
+                new RightSet(Right.EDIT, Right.COMMENT),
+                RuleState.ALLOW
+            )
+        );
+
+        List<SecurityRuleDiff> securityRuleDiffs = this.securityRuleAbacus.computeRuleDiff(previousRules, currentRules);
+        assertEquals(1, securityRuleDiffs.size());
+
+        DefaultSecurityRuleDiff expectedDiff = new DefaultSecurityRuleDiff(SecurityRuleDiff.ChangeType.RULE_UPDATED,
+            new WritableSecurityRuleImpl(
+                Collections.singletonList(new DocumentReference("xwiki", "XWiki", "XWikiAllGroup")),
+                Collections.emptyList(),
+                new RightSet(Right.VIEW),
+                RuleState.ALLOW),
+            new WritableSecurityRuleImpl(
+                Collections.singletonList(new DocumentReference("xwiki", "XWiki", "XWikiAllGroup")),
+                Collections.emptyList(),
+                new RightSet(Right.VIEW, Right.EDIT),
+                RuleState.ALLOW),
+            Collections.singleton(SecurityRuleDiff.PropertyType.RIGHTS)
+            );
+        assertEquals(expectedDiff, securityRuleDiffs.get(0));
+    }
+
+    @Test
+    void computeDiff_changeState()
+    {
+        List<ReadableSecurityRule> previousRules = Arrays.asList(
+            // gives view to both admin group and all group
+            new WritableSecurityRuleImpl(
+                Arrays.asList(
+                    new DocumentReference("xwiki", "XWiki", "XWikiAdminGroup"),
+                    new DocumentReference("xwiki", "XWiki", "XWikiAllGroup")
+                ),
+                Collections.emptyList(),
+                new RightSet(Right.VIEW),
+                RuleState.ALLOW
+            ),
+            // and then edit and comment only to admins
+            new WritableSecurityRuleImpl(
+                Arrays.asList(new DocumentReference("xwiki", "XWiki", "XWikiAdminGroup")),
+                Collections.emptyList(),
+                new RightSet(Right.EDIT, Right.COMMENT),
+                RuleState.ALLOW
+            )
+        );
+
+        List<ReadableSecurityRule> currentRules = Arrays.asList(
+            // gives view to both admin group and all group
+            new WritableSecurityRuleImpl(
+                Arrays.asList(
+                    new DocumentReference("xwiki", "XWiki", "XWikiAdminGroup"),
+                    new DocumentReference("xwiki", "XWiki", "XWikiAllGroup")
+                ),
+                Collections.emptyList(),
+                new RightSet(Right.VIEW),
+                RuleState.DENY
+            ),
+            // and then edit and comment only to admins
+            new WritableSecurityRuleImpl(
+                Arrays.asList(new DocumentReference("xwiki", "XWiki", "XWikiAdminGroup")),
+                Collections.emptyList(),
+                new RightSet(Right.EDIT, Right.COMMENT),
+                RuleState.ALLOW
+            )
+        );
+
+        List<SecurityRuleDiff> securityRuleDiffs = this.securityRuleAbacus.computeRuleDiff(previousRules, currentRules);
+        assertEquals(4, securityRuleDiffs.size());
+
+        DefaultSecurityRuleDiff expectedDiff1 = new DefaultSecurityRuleDiff(SecurityRuleDiff.ChangeType.RULE_UPDATED,
+            new WritableSecurityRuleImpl(
+                Collections.singletonList(new DocumentReference("xwiki", "XWiki", "XWikiAdminGroup")),
+                Collections.emptyList(),
+                new RightSet(Right.VIEW, Right.EDIT, Right.COMMENT),
+                RuleState.ALLOW),
+            new WritableSecurityRuleImpl(
+                Collections.singletonList(new DocumentReference("xwiki", "XWiki", "XWikiAdminGroup")),
+                Collections.emptyList(),
+                new RightSet(Right.EDIT, Right.COMMENT),
+                RuleState.ALLOW),
+            Collections.singleton(SecurityRuleDiff.PropertyType.RIGHTS)
+        );
+        assertEquals(expectedDiff1, securityRuleDiffs.get(0));
+
+        DefaultSecurityRuleDiff expectedDiff2 = new DefaultSecurityRuleDiff(SecurityRuleDiff.ChangeType.RULE_DELETED,
+            new WritableSecurityRuleImpl(
+                Collections.singletonList(new DocumentReference("xwiki", "XWiki", "XWikiAllGroup")),
+                Collections.emptyList(),
+                new RightSet(Right.VIEW),
+                RuleState.ALLOW),
+            null,
+            Collections.emptySet()
+        );
+        assertEquals(expectedDiff2, securityRuleDiffs.get(1));
+
+        DefaultSecurityRuleDiff expectedDiff3 = new DefaultSecurityRuleDiff(SecurityRuleDiff.ChangeType.RULE_ADDED,
+            null,
+            new WritableSecurityRuleImpl(
+                Collections.singletonList(new DocumentReference("xwiki", "XWiki", "XWikiAdminGroup")),
+                Collections.emptyList(),
+                new RightSet(Right.VIEW),
+                RuleState.DENY),
+            Collections.emptySet()
+        );
+        assertEquals(expectedDiff3, securityRuleDiffs.get(2));
+
+        DefaultSecurityRuleDiff expectedDiff4 = new DefaultSecurityRuleDiff(SecurityRuleDiff.ChangeType.RULE_ADDED,
+            null,
+            new WritableSecurityRuleImpl(
+                Collections.singletonList(new DocumentReference("xwiki", "XWiki", "XWikiAllGroup")),
+                Collections.emptyList(),
+                new RightSet(Right.VIEW),
+                RuleState.DENY),
+            Collections.emptySet()
+        );
+        assertEquals(expectedDiff4, securityRuleDiffs.get(3));
     }
 }

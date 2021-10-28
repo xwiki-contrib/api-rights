@@ -22,6 +22,8 @@ package org.xwiki.contrib.rights.internal;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.apache.commons.lang3.builder.EqualsBuilder;
+import org.apache.commons.lang3.builder.HashCodeBuilder;
 import org.xwiki.contrib.rights.WritableSecurityRule;
 import org.xwiki.model.reference.DocumentReference;
 import org.xwiki.security.GroupSecurityReference;
@@ -104,7 +106,8 @@ public class WritableSecurityRuleImpl implements WritableSecurityRule
         this.isPersisted = rule.isPersisted();
     }
 
-    @Override public List<DocumentReference> getUsers()
+    @Override
+    public List<DocumentReference> getUsers()
     {
         return users;
     }
@@ -114,12 +117,14 @@ public class WritableSecurityRuleImpl implements WritableSecurityRule
      *
      * @param users references of users to set
      */
-    @Override public void setUsers(List<DocumentReference> users)
+    @Override
+    public void setUsers(List<DocumentReference> users)
     {
         this.users = users;
     }
 
-    @Override public List<DocumentReference> getGroups()
+    @Override
+    public List<DocumentReference> getGroups()
     {
         return groups;
     }
@@ -129,12 +134,14 @@ public class WritableSecurityRuleImpl implements WritableSecurityRule
      *
      * @param groups references of groups to set
      */
-    @Override public void setGroups(List<DocumentReference> groups)
+    @Override
+    public void setGroups(List<DocumentReference> groups)
     {
         this.groups = groups;
     }
 
-    @Override public RightSet getRights()
+    @Override
+    public RightSet getRights()
     {
         return rights;
     }
@@ -144,7 +151,8 @@ public class WritableSecurityRuleImpl implements WritableSecurityRule
      *
      * @param rights the rights list
      */
-    @Override public void setRights(List<Right> rights)
+    @Override
+    public void setRights(List<Right> rights)
     {
         this.rights = new RightSet(rights);
     }
@@ -154,7 +162,8 @@ public class WritableSecurityRuleImpl implements WritableSecurityRule
      *
      * @param rights the right set instance containing the rights.
      */
-    @Override public void setRights(RightSet rights)
+    @Override
+    public void setRights(RightSet rights)
     {
         this.rights = new RightSet(rights);
     }
@@ -166,27 +175,32 @@ public class WritableSecurityRuleImpl implements WritableSecurityRule
      *     comes from a {@link ReadableSecurityRule} (eventually using {@link WritableSecurityRuleImpl#WritableSecurityRuleImpl(ReadableSecurityRule)},
      *     the value of {@link WritableSecurityRuleImpl#isPersisted} will be copied from the object given as parameter.
      */
-    @Override public boolean isPersisted()
+    @Override
+    public boolean isPersisted()
     {
         return isPersisted;
     }
 
-    @Override public boolean match(Right right)
+    @Override
+    public boolean match(Right right)
     {
         return rights.contains(right);
     }
 
-    @Override public boolean match(GroupSecurityReference group)
+    @Override
+    public boolean match(GroupSecurityReference group)
     {
         return groups.contains(group.getOriginalDocumentReference());
     }
 
-    @Override public boolean match(UserSecurityReference user)
+    @Override
+    public boolean match(UserSecurityReference user)
     {
         return groups.contains(user.getOriginalReference());
     }
 
-    @Override public RuleState getState()
+    @Override
+    public RuleState getState()
     {
         return state;
     }
@@ -197,12 +211,45 @@ public class WritableSecurityRuleImpl implements WritableSecurityRule
      *
      * @param state the state of this rule.
      */
-    @Override public void setState(RuleState state)
+    @Override
+    public void setState(RuleState state)
     {
         if (null != state) {
             this.state = state;
         } else {
             this.state = RuleState.ALLOW;
         }
+    }
+
+    @Override
+    public boolean equals(Object o)
+    {
+        if (this == o) {
+            return true;
+        }
+
+        if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
+
+        WritableSecurityRuleImpl that = (WritableSecurityRuleImpl) o;
+
+        return new EqualsBuilder()
+            .append(groups, that.groups)
+            .append(users, that.users)
+            .append(rights, that.rights)
+            .append(state, that.state)
+            .isEquals();
+    }
+
+    @Override
+    public int hashCode()
+    {
+        return new HashCodeBuilder(17, 37)
+            .append(groups)
+            .append(users)
+            .append(rights)
+            .append(state)
+            .toHashCode();
     }
 }

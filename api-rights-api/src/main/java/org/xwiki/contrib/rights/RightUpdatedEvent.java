@@ -28,9 +28,8 @@ import org.xwiki.stability.Unstable;
  * Along with the event those information are sent:
  * <ul>
  *     <li>source: the {@link org.xwiki.security.SecurityReference} of the entity impacted by the right update</li>
- *     <li>data: a {@link org.apache.commons.lang3.tuple.Pair} of
- *      {@link java.util.List<org.xwiki.security.authorization.ReadableSecurityRule>} with the left part being the
- *      rules before the update, and the right part the rules after.</li>
+ *     <li>data: a {@link java.util.List<SecurityRuleDiff>} corresponding of the diff of rules before and after the
+ *     changes</li>
  * </ul>
  *
  * @version $Id$

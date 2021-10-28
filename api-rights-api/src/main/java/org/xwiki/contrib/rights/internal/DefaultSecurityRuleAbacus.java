@@ -21,15 +21,19 @@ package org.xwiki.contrib.rights.internal;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 import javax.inject.Inject;
 import javax.inject.Singleton;
 
+import org.apache.commons.lang3.StringUtils;
 import org.xwiki.component.annotation.Component;
 import org.xwiki.contrib.rights.SecurityRuleAbacus;
+import org.xwiki.contrib.rights.SecurityRuleDiff;
 import org.xwiki.model.reference.DocumentReference;
 import org.xwiki.model.reference.EntityReferenceSerializer;
 import org.xwiki.security.authorization.ReadableSecurityRule;
@@ -100,5 +104,88 @@ public class DefaultSecurityRuleAbacus implements SecurityRuleAbacus
         });
 
         return new ArrayList<ReadableSecurityRule>(normalizedRulesMap.values());
+    }
+
+    private boolean isSameRuleUpdate(ReadableSecurityRule previousRule, ReadableSecurityRule currentRule)
+    {
+        boolean previousSubjectIsGroup = previousRule.getUsers().isEmpty();
+        boolean currentSubjectIsGroup = previousRule.getUsers().isEmpty();
+        if (previousSubjectIsGroup == currentSubjectIsGroup && previousRule.getState() == currentRule.getState()) {
+            if (previousSubjectIsGroup) {
+                return previousRule.getGroups().equals(currentRule.getGroups());
+            } else {
+                return previousRule.getUsers().equals(currentRule.getUsers());
+            }
+        }
+        return false;
+    }
+
+    @Override
+    public List<SecurityRuleDiff> computeRuleDiff(List<ReadableSecurityRule> previousRules,
+        List<ReadableSecurityRule> currentRules)
+    {
+        List<ReadableSecurityRule> normalizedPreviousRules = this.normalizeRulesBySubject(previousRules);
+        List<ReadableSecurityRule> normalizedCurrentRules = this.normalizeRulesBySubject(currentRules);
+
+        List<SecurityRuleDiff> result = new ArrayList<>();
+
+        List<ReadableSecurityRule> intersectionRules =
+            normalizedCurrentRules.stream().filter(normalizedPreviousRules::contains).collect(Collectors.toList());
+
+        normalizedPreviousRules.removeAll(intersectionRules);
+        normalizedCurrentRules.removeAll(intersectionRules);
+
+        normalizedPreviousRules.sort(ReadableSecurityRuleComparator.INSTANCE);
+        normalizedCurrentRules.sort(ReadableSecurityRuleComparator.INSTANCE);
+
+        for (ReadableSecurityRule normalizedPreviousRule : normalizedPreviousRules) {
+            boolean updated = false;
+            for (ReadableSecurityRule currentRule : normalizedCurrentRules) {
+                if (isSameRuleUpdate(normalizedPreviousRule, currentRule)) {
+                    result.add(new DefaultSecurityRuleDiff(SecurityRuleDiff.ChangeType.RULE_UPDATED,
+                        normalizedPreviousRule, currentRule,
+                        Collections.singleton(SecurityRuleDiff.PropertyType.RIGHTS)));
+                    normalizedCurrentRules.remove(currentRule);
+                    updated = true;
+                    break;
+                }
+            }
+            if (!updated) {
+                result.add(new DefaultSecurityRuleDiff(SecurityRuleDiff.ChangeType.RULE_DELETED,
+                    normalizedPreviousRule, null, Collections.emptySet()));
+            }
+        }
+
+        for (ReadableSecurityRule normalizedCurrentRule : normalizedCurrentRules) {
+            result.add(new DefaultSecurityRuleDiff(SecurityRuleDiff.ChangeType.RULE_ADDED,
+                null, normalizedCurrentRule, Collections.emptySet()));
+        }
+
+        return result;
+    }
+
+    private static final class ReadableSecurityRuleComparator implements Comparator<ReadableSecurityRule>
+    {
+        private static final ReadableSecurityRuleComparator INSTANCE = new ReadableSecurityRuleComparator();
+
+        private ReadableSecurityRuleComparator()
+        {
+        }
+
+        @Override
+        public int compare(ReadableSecurityRule rule1, ReadableSecurityRule rule2)
+        {
+            if (rule1.equals(rule2)) {
+                return 0;
+            } else if (!rule1.getState().equals(rule2.getState())) {
+                return rule1.getState().compareTo(rule2.getState());
+            } else if (!rule1.getUsers().equals(rule2.getUsers())) {
+                return StringUtils.join(rule1.getUsers()).compareTo(StringUtils.join(rule2.getUsers()));
+            } else if (!rule1.getGroups().equals(rule2.getGroups())) {
+                return StringUtils.join(rule1.getGroups()).compareTo(StringUtils.join(rule2.getGroups()));
+            } else {
+                return StringUtils.join(rule1.getRights()).compareTo(StringUtils.join(rule2.getRights()));
+            }
+        }
     }
 }
