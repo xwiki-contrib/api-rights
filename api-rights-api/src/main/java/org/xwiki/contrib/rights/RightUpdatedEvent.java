@@ -27,11 +27,13 @@ import org.xwiki.stability.Unstable;
  *
  * Along with the event those information are sent:
  * <ul>
- *     <li>source: the {@link org.xwiki.security.SecurityReference} of the entity impacted by the right update</li>
- *     <li>data: a {@link java.util.List<SecurityRuleDiff>} corresponding of the diff of rules before and after the
+ *     <li>source: the SecurityReference of the entity impacted by the right update</li>
+ *     <li>data: a List&lt;SecurityRuleDiff&gt; corresponding of the diff of rules before and after the
  *     changes</li>
  * </ul>
  *
+ *
+ * @see SecurityRuleDiff
  * @version $Id$
  * @since 2.0
  */
