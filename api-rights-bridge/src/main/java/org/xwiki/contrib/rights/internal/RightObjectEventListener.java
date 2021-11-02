@@ -132,9 +132,11 @@ public class RightObjectEventListener extends AbstractDocumentEventListener
 
         List<BaseObject> xObjects = document.getXObjects(xClassReference);
         for (BaseObject xObject : xObjects) {
-            XWikiSecurityRule newRule =
-                XWikiSecurityRule.createNewRule(xObject, this.documentReferenceResolver, wikiReference, false);
-            securityRules.add(newRule);
+            if (xObject != null) {
+                XWikiSecurityRule newRule =
+                    XWikiSecurityRule.createNewRule(xObject, this.documentReferenceResolver, wikiReference, false);
+                securityRules.add(newRule);
+            }
         }
         return securityRules;
     }
