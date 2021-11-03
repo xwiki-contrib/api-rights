@@ -87,7 +87,8 @@ public class DefaultRightsReader implements RightsReader
      * @see org.xwiki.contrib.rights.RightsReader#getActualRules(org.xwiki.model.reference.EntityReference)
      */
     @Override
-    public List<ReadableSecurityRule> getActualRules(EntityReference entityReference) throws AuthorizationException
+    public List<ReadableSecurityRule> getActualRules(EntityReference entityReference, boolean withInheritance)
+        throws AuthorizationException
     {
         // Create a set containing rights that were explicitly encountered going up the parent tree
         // It will be updated based on what is found when looking at parent pages
@@ -124,8 +125,13 @@ public class DefaultRightsReader implements RightsReader
 
             // Add rights we explicitly encountered on the page to be ignored in parent rules
             encounteredExplicitRights.addAll(toBeAddedExplicitRights);
-            // Go to the parent security reference (parent space or main wiki)
-            securityReference = securityReference.getParentSecurityReference();
+
+            if (withInheritance) {
+                // Go to the parent security reference (parent space or main wiki)
+                securityReference = securityReference.getParentSecurityReference();
+            } else {
+                securityReference = null;
+            }
         } while (securityReference != null);
 
         return actualRules;
