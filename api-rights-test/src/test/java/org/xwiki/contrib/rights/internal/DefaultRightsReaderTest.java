@@ -718,6 +718,56 @@ public class DefaultRightsReaderTest extends AbstractRightsTest
     }
 
     /**
+     * Test that a denying rule at a lower level for a different subject does not remove the allowing rule from a higher
+     * level.
+     */
+    @Test
+    void getActualRules_Space_WikiDifferentSubjectSameRightDifferentState() throws Exception
+    {
+        WikiReference testedWikiReference = new WikiReference("xwiki");
+        SpaceReference testedSpaceReference = new SpaceReference("SP1", testedWikiReference);
+        // return an allow rule at wiki level, for a right
+        this.mockEntityReferenceRules(testedWikiReference, Arrays.asList(
+            new XWikiSecurityRule(
+                new RightSet(Right.EDIT),
+                RuleState.ALLOW,
+                Collections.emptyList(),
+                Arrays.asList(new DocumentReference("xwiki", "XWiki", "XWikiAdminGroup")),
+                true
+            ))
+        );
+        // ... and a deny rule at space level, for the same right but for a different subject
+        this.mockEntityReferenceRules(testedSpaceReference, Arrays.asList(
+            new XWikiSecurityRule(
+                new RightSet(Right.EDIT),
+                RuleState.DENY,
+                Collections.emptyList(),
+                Arrays.asList(new DocumentReference("xwiki", "XWiki", "XWikiAllGroup")),
+                true
+            ))
+        );
+        // check what gets returned: both rules should be kept, even if they concern the same right, because they don't
+        // actually overwrite eachother from a semantic pov.
+        List<ReadableSecurityRule> inheritedRules = this.rightsReader.getActualRules(testedSpaceReference);
+        assertEquals(2, inheritedRules.size());
+        List<ReadableSecurityRule> normalizedInheritedRules =
+            this.securityRuleAbacus.normalizeRulesBySubject(inheritedRules);
+        assertEquals(2, normalizedInheritedRules.size());
+        assertContainsRule(normalizedInheritedRules,
+            new DocumentReference("xwiki", "XWiki", "XWikiAdminGroup"),
+            true,
+            Arrays.asList(Right.EDIT),
+            RuleState.ALLOW
+        );
+        assertContainsRule(normalizedInheritedRules,
+            new DocumentReference("xwiki", "XWiki", "XWikiAllGroup"),
+            true,
+            Arrays.asList(Right.EDIT),
+            RuleState.DENY
+        );
+    }
+
+    /**
      * Test that if a parent document has the same subject than its child, but has additional rights, those rights are
      * added too in the actual rights of the page
      */
