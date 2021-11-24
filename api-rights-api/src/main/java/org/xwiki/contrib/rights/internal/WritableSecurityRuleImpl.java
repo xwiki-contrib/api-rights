@@ -24,6 +24,7 @@ import java.util.List;
 
 import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
+import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.xwiki.contrib.rights.WritableSecurityRule;
 import org.xwiki.model.reference.DocumentReference;
 import org.xwiki.security.GroupSecurityReference;
@@ -251,5 +252,17 @@ public class WritableSecurityRuleImpl implements WritableSecurityRule
             .append(rights)
             .append(state)
             .toHashCode();
+    }
+
+    @Override
+    public String toString()
+    {
+        return new ToStringBuilder(this)
+            .append("isPersisted", isPersisted)
+            .append("groups", groups)
+            .append("users", users)
+            .append("rights", rights)
+            .append("state", state)
+            .toString();
     }
 }

@@ -51,7 +51,6 @@ import com.xpn.xwiki.test.junit5.mockito.OldcoreTest;
 import com.xpn.xwiki.test.reference.ReferenceComponentList;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
@@ -807,16 +806,6 @@ public class DefaultRightsReaderTest extends AbstractRightsTest
             Arrays.asList(Right.VIEW, Right.COMMENT),
             RuleState.ALLOW
         );
-
-        inheritedRules = this.rightsReader.getActualRules(testedSpaceReference, false);
-        normalizedInheritedRules = this.securityRuleAbacus.normalizeRulesBySubject(inheritedRules);
-        assertEquals(1, normalizedInheritedRules.size());
-        assertContainsRule(normalizedInheritedRules,
-            new DocumentReference("xwiki", "XWiki", "XWikiAdminGroup"),
-            true,
-            Arrays.asList(Right.VIEW),
-            RuleState.ALLOW
-        );
     }
 
     /**
@@ -859,16 +848,6 @@ public class DefaultRightsReaderTest extends AbstractRightsTest
             Arrays.asList(Right.COMMENT),
             RuleState.ALLOW
         );
-        assertContainsRule(normalizedInheritedRules,
-            new DocumentReference("xwiki", "XWiki", "Admin"),
-            false,
-            Arrays.asList(Right.VIEW),
-            RuleState.ALLOW
-        );
-
-        inheritedRules = this.rightsReader.getActualRules(testedSpaceReference, false);
-        normalizedInheritedRules = this.securityRuleAbacus.normalizeRulesBySubject(inheritedRules);
-        assertEquals(1, normalizedInheritedRules.size());
         assertContainsRule(normalizedInheritedRules,
             new DocumentReference("xwiki", "XWiki", "Admin"),
             false,
@@ -1205,8 +1184,6 @@ public class DefaultRightsReaderTest extends AbstractRightsTest
             Arrays.asList(Right.VIEW),
             RuleState.ALLOW
         );
-
-        assertTrue(this.rightsReader.getActualRules(testedDocumentReference, false).isEmpty());
     }
 
     /**
@@ -1265,16 +1242,6 @@ public class DefaultRightsReaderTest extends AbstractRightsTest
             Arrays.asList(Right.COMMENT),
             RuleState.ALLOW
         );
-        assertContainsRule(normalizedInheritedRules,
-            new DocumentReference("xwiki", "XWiki", "Bob"),
-            false,
-            Arrays.asList(Right.EDIT),
-            RuleState.ALLOW
-        );
-
-        inheritedRules = this.rightsReader.getActualRules(testedDocumentReference, false);
-        normalizedInheritedRules = this.securityRuleAbacus.normalizeRulesBySubject(inheritedRules);
-        assertEquals(1, normalizedInheritedRules.size());
         assertContainsRule(normalizedInheritedRules,
             new DocumentReference("xwiki", "XWiki", "Bob"),
             false,
