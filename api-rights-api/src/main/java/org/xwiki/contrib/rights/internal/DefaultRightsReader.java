@@ -21,7 +21,11 @@ package org.xwiki.contrib.rights.internal;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 import javax.inject.Inject;
 import javax.inject.Named;
@@ -30,6 +34,7 @@ import javax.inject.Singleton;
 import org.xwiki.component.annotation.Component;
 import org.xwiki.contrib.rights.RightsReader;
 import org.xwiki.contrib.rights.WritableSecurityRule;
+import org.xwiki.model.reference.DocumentReference;
 import org.xwiki.model.reference.EntityReference;
 import org.xwiki.security.SecurityReference;
 import org.xwiki.security.SecurityReferenceFactory;
@@ -37,6 +42,7 @@ import org.xwiki.security.authorization.AuthorizationException;
 import org.xwiki.security.authorization.ReadableSecurityRule;
 import org.xwiki.security.authorization.Right;
 import org.xwiki.security.authorization.RightSet;
+import org.xwiki.security.authorization.RuleState;
 import org.xwiki.security.authorization.SecurityEntryReader;
 import org.xwiki.security.authorization.SecurityRule;
 import org.xwiki.security.authorization.SecurityRuleEntry;
@@ -90,10 +96,14 @@ public class DefaultRightsReader implements RightsReader
     public List<ReadableSecurityRule> getActualRules(EntityReference entityReference)
         throws AuthorizationException
     {
-        // Create a set containing rights that were explicitly encountered going up the parent tree
+        // Create a set containing allowed rights that were explicitly encountered going up the parent tree
         // It will be updated based on what is found when looking at parent pages
         // It only contains rights for which inheritanceOverridePolicy flag is true
-        RightSet encounteredExplicitRights = new RightSet();
+        RightSet encounteredAllowRights = new RightSet();
+
+        // Create a set containing denied rights and associated exact subjects of the rules: if a higher rule is an
+        // allow but matches a deny rule for same subject, it will be ignored.
+        Map<Right, Set<DocumentReference>> encounteredDenyRights = new HashMap<>();
         // The list of all the actual (current + inherited) rules of the page
         List<ReadableSecurityRule> actualRules = new ArrayList<>();
 
@@ -104,27 +114,49 @@ public class DefaultRightsReader implements RightsReader
             List<ReadableSecurityRule> inheritedPageRules = this.getRules(securityReference, false);
             // We need to treat every groups and users on the page before flagging the rights as inherited
             // So we keep track of which rights are explicitly set on this parent page to remove them afterwards
-            RightSet toBeAddedExplicitRights = new RightSet();
+            RightSet toBeAddedExplicitAllowRights = new RightSet();
+            Map<Right, Set<DocumentReference>> toBeAddedDenyRights = new HashMap<>();
+
             // Inspect rules right by right to not miss any explicit right
             for (ReadableSecurityRule rule : inheritedPageRules) {
                 for (Right right : rule.getRights()) {
-                    // If the right was already set explicitly down the document tree, skip
-                    if (encounteredExplicitRights.contains(right)) {
+                    // If the right was already set explicitly with an Allow rule down the document tree, skip
+                    // Note that we're doing that because Allow in XWiki automatically set a whitelist: all users
+                    // that are not part of the subject will be denied the right, so we can safely ignore the rules
+                    // above.
+                    if (encounteredAllowRights.contains(right)) {
                         continue;
+                    } else if (encounteredDenyRights.containsKey(right)) {
+                        Set<DocumentReference> subjectReferences = encounteredDenyRights.get(right);
+                        boolean shouldIgnore =
+                            (!rule.getUsers().isEmpty() && subjectReferences.containsAll(rule.getUsers()))
+                            || (!rule.getGroups().isEmpty() && subjectReferences.containsAll(rule.getGroups()));
+                        if (shouldIgnore) {
+                            continue;
+                        }
                     }
                     // Else, this is an actual right for the current page
                     WritableSecurityRule toBeAddedSecurityRule = new WritableSecurityRuleImpl(rule);
                     toBeAddedSecurityRule.setRights(new RightSet(right));
                     actualRules.add(toBeAddedSecurityRule);
-                    // If right override higher level, add it to be ignored for parent rules
+                    // If right override higher level, and is allow, add it to be ignored for parent rules
                     if (right.getInheritanceOverridePolicy()) {
-                        toBeAddedExplicitRights.add(right);
+                        if (rule.getState() == RuleState.ALLOW) {
+                            toBeAddedExplicitAllowRights.add(right);
+                        } else if (rule.getState() == RuleState.DENY) {
+                            if (!toBeAddedDenyRights.containsKey(right)) {
+                                toBeAddedDenyRights.put(right, new HashSet<>());
+                            }
+                            toBeAddedDenyRights.get(right).addAll(rule.getGroups());
+                            toBeAddedDenyRights.get(right).addAll(rule.getUsers());
+                        }
                     }
                 }
             }
 
             // Add rights we explicitly encountered on the page to be ignored in parent rules
-            encounteredExplicitRights.addAll(toBeAddedExplicitRights);
+            encounteredAllowRights.addAll(toBeAddedExplicitAllowRights);
+            encounteredDenyRights.putAll(toBeAddedDenyRights);
 
             // Go to the parent security reference (parent space or main wiki)
             securityReference = securityReference.getParentSecurityReference();

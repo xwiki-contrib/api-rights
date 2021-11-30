@@ -493,11 +493,60 @@ public class DefaultRightsReaderTest extends AbstractRightsTest
     }
 
     /**
-     * Test that if a parent document has the exact same rules than its child with different state, only the document
-     * rule is kept.
+     * If rules are returned on same right with a Deny on a lower level and an Allow on higher level, we keep both
+     * rules: the rationale is that the Allow will act as a whitelist, so if only keep the Deny we might allow people
+     * to get some access they should not have because they should be excluded by that whitelist.
      */
     @Test
     void getActualRules_Space_WikiSameRuleDifferentState() throws Exception
+    {
+        WikiReference testedWikiReference = new WikiReference("xwiki");
+        SpaceReference testedSpaceReference = new SpaceReference("SP1", testedWikiReference);
+        // return the following rule for when rules are asked for the wiki...
+        this.mockEntityReferenceRules(testedWikiReference, Arrays.asList(
+            new XWikiSecurityRule(
+                new RightSet(Right.EDIT),
+                RuleState.ALLOW,
+                Collections.emptyList(),
+                Arrays.asList(new DocumentReference("xwiki", "XWiki", "XWikiAllGroup")),
+                true
+            ))
+        );
+        // ... and the exact same rule for the space
+        this.mockEntityReferenceRules(testedSpaceReference, Arrays.asList(
+            new XWikiSecurityRule(
+                new RightSet(Right.EDIT),
+                RuleState.DENY,
+                Collections.emptyList(),
+                Arrays.asList(new DocumentReference("xwiki", "XWiki", "XWikiAdminGroup")),
+                true
+            ))
+        );
+        // check what gets returned
+        List<ReadableSecurityRule> inheritedRules = this.rightsReader.getActualRules(testedSpaceReference);
+        assertEquals(2, inheritedRules.size());
+        List<ReadableSecurityRule> normalizedInheritedRules =
+            this.securityRuleAbacus.normalizeRulesBySubject(inheritedRules);
+        assertEquals(2, normalizedInheritedRules.size());
+        assertContainsRule(normalizedInheritedRules,
+            new DocumentReference("xwiki", "XWiki", "XWikiAdminGroup"),
+            true,
+            Arrays.asList(Right.EDIT),
+            RuleState.DENY
+        );
+        assertContainsRule(normalizedInheritedRules,
+            new DocumentReference("xwiki", "XWiki", "XWikiAllGroup"),
+            true,
+            Arrays.asList(Right.EDIT),
+            RuleState.ALLOW
+        );
+    }
+
+    /**
+     * If both rules concerns same right and same subject, we should only keep the latest rule, the one the lower.
+     */
+    @Test
+    void getActualRules_Space_WikiSameRuleDifferentStateSameSubject() throws Exception
     {
         WikiReference testedWikiReference = new WikiReference("xwiki");
         SpaceReference testedSpaceReference = new SpaceReference("SP1", testedWikiReference);
@@ -675,8 +724,66 @@ public class DefaultRightsReaderTest extends AbstractRightsTest
     }
 
     /**
+     * Test that if a parent has a rule that has a right in common with its child for the same subject, the allow rule
+     * is not returned anymore, but the allow above concerning another subject is returned.
+     */
+    @Test
+    void getActualRules_Space_WikiSameSubjectOverlappingRightDifferentStateTwoAllows() throws Exception
+    {
+        WikiReference testedWikiReference = new WikiReference("xwiki");
+        SpaceReference testedSpaceReference = new SpaceReference("SP1", testedWikiReference);
+        SpaceReference testedSubSpaceReference = new SpaceReference("SubSP1", testedSpaceReference);
+        // return the following rule for when rules are asked for the wiki...
+        this.mockEntityReferenceRules(testedWikiReference, Arrays.asList(
+            new XWikiSecurityRule(
+                new RightSet(Right.VIEW, Right.EDIT),
+                RuleState.ALLOW,
+                Collections.emptyList(),
+                Arrays.asList(new DocumentReference("xwiki", "XWiki", "XWikiAllGroup")),
+                true
+            ))
+        );
+        this.mockEntityReferenceRules(testedSpaceReference, Arrays.asList(
+            new XWikiSecurityRule(
+                new RightSet(Right.EDIT),
+                RuleState.ALLOW,
+                Collections.emptyList(),
+                Arrays.asList(new DocumentReference("xwiki", "XWiki", "XWikiAdminGroup")),
+                true
+            ))
+        );
+        this.mockEntityReferenceRules(testedSubSpaceReference, Arrays.asList(
+            new XWikiSecurityRule(
+                new RightSet(Right.EDIT),
+                RuleState.DENY,
+                Collections.emptyList(),
+                Arrays.asList(new DocumentReference("xwiki", "XWiki", "XWikiAdminGroup")),
+                true
+            ))
+        );
+        // check what gets returned
+        List<ReadableSecurityRule> inheritedRules = this.rightsReader.getActualRules(testedSubSpaceReference);
+        List<ReadableSecurityRule> normalizedInheritedRules =
+            this.securityRuleAbacus.normalizeRulesBySubject(inheritedRules);
+        assertEquals(2, normalizedInheritedRules.size());
+        assertContainsRule(normalizedInheritedRules,
+            new DocumentReference("xwiki", "XWiki", "XWikiAllGroup"),
+            true,
+            Arrays.asList(Right.VIEW, Right.EDIT),
+            RuleState.ALLOW
+        );
+        assertContainsRule(normalizedInheritedRules,
+            new DocumentReference("xwiki", "XWiki", "XWikiAdminGroup"),
+            true,
+            Arrays.asList(Right.EDIT),
+            RuleState.DENY
+        );
+    }
+
+    /**
      * Test that if a parent document has the same explicit rights than its child, but on different subjects, those
-     * subjects are ignored from the actual rights (because overridden)
+     * subjects are ignored from the actual rights: the rights are overriden because Allow works like a whitelist,
+     * i.e. it automatically forbid all other subjects for that right.
      */
     @Test
     void getActualRules_Space_WikiDifferentSubjectSameRight() throws Exception
