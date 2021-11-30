@@ -31,9 +31,6 @@
   <name>XWiki Rights API - API</name>
   <description>Rights API - Public types and services.</description>
   <packaging>jar</packaging>
-  <properties>
-    <checkstyle.suppressions.location>${basedir}/src/checkstyle/checkstyle-suppressions.xml</checkstyle.suppressions.location>
-  </properties>
   <dependencies>
     <dependency>
       <groupId>org.xwiki.platform</groupId>

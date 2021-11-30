@@ -22,7 +22,6 @@ package org.xwiki.contrib.rights.internal;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -115,7 +114,6 @@ public class DefaultRightsReader implements RightsReader
             // We need to treat every groups and users on the page before flagging the rights as inherited
             // So we keep track of which rights are explicitly set on this parent page to remove them afterwards
             RightSet toBeAddedExplicitAllowRights = new RightSet();
-            Map<Right, Set<DocumentReference>> toBeAddedDenyRights = new HashMap<>();
 
             // Inspect rules right by right to not miss any explicit right
             for (ReadableSecurityRule rule : inheritedPageRules) {
@@ -126,37 +124,20 @@ public class DefaultRightsReader implements RightsReader
                     // above.
                     if (encounteredAllowRights.contains(right)) {
                         continue;
-                    } else if (encounteredDenyRights.containsKey(right)) {
-                        Set<DocumentReference> subjectReferences = encounteredDenyRights.get(right);
-                        boolean shouldIgnore =
-                            (!rule.getUsers().isEmpty() && subjectReferences.containsAll(rule.getUsers()))
-                            || (!rule.getGroups().isEmpty() && subjectReferences.containsAll(rule.getGroups()));
-                        if (shouldIgnore) {
-                            continue;
-                        }
                     }
                     // Else, this is an actual right for the current page
                     WritableSecurityRule toBeAddedSecurityRule = new WritableSecurityRuleImpl(rule);
                     toBeAddedSecurityRule.setRights(new RightSet(right));
                     actualRules.add(toBeAddedSecurityRule);
                     // If right override higher level, and is allow, add it to be ignored for parent rules
-                    if (right.getInheritanceOverridePolicy()) {
-                        if (rule.getState() == RuleState.ALLOW) {
-                            toBeAddedExplicitAllowRights.add(right);
-                        } else if (rule.getState() == RuleState.DENY) {
-                            if (!toBeAddedDenyRights.containsKey(right)) {
-                                toBeAddedDenyRights.put(right, new HashSet<>());
-                            }
-                            toBeAddedDenyRights.get(right).addAll(rule.getGroups());
-                            toBeAddedDenyRights.get(right).addAll(rule.getUsers());
-                        }
+                    if (right.getInheritanceOverridePolicy() && rule.getState() == RuleState.ALLOW) {
+                        toBeAddedExplicitAllowRights.add(right);
                     }
                 }
             }
 
             // Add rights we explicitly encountered on the page to be ignored in parent rules
             encounteredAllowRights.addAll(toBeAddedExplicitAllowRights);
-            encounteredDenyRights.putAll(toBeAddedDenyRights);
 
             // Go to the parent security reference (parent space or main wiki)
             securityReference = securityReference.getParentSecurityReference();

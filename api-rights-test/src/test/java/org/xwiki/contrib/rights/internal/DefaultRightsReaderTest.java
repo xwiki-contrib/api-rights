@@ -543,7 +543,9 @@ public class DefaultRightsReaderTest extends AbstractRightsTest
     }
 
     /**
-     * If both rules concerns same right and same subject, we should only keep the latest rule, the one the lower.
+     * If both rules concerns same right and same subject, and deny is specified lower than allow, then both rules
+     * need to be kept: this is counter-intuitive, but it's needed to be able to benefit of the whitespace
+     * behaviour of the allow rule, while keep denying the right.
      */
     @Test
     void getActualRules_Space_WikiSameRuleDifferentStateSameSubject() throws Exception
@@ -572,15 +574,21 @@ public class DefaultRightsReaderTest extends AbstractRightsTest
         );
         // check what gets returned
         List<ReadableSecurityRule> inheritedRules = this.rightsReader.getActualRules(testedSpaceReference);
-        assertEquals(1, inheritedRules.size());
+        assertEquals(2, inheritedRules.size());
         List<ReadableSecurityRule> normalizedInheritedRules =
             this.securityRuleAbacus.normalizeRulesBySubject(inheritedRules);
-        assertEquals(1, normalizedInheritedRules.size());
+        assertEquals(2, normalizedInheritedRules.size());
         assertContainsRule(normalizedInheritedRules,
             new DocumentReference("xwiki", "XWiki", "XWikiAdminGroup"),
             true,
             Arrays.asList(Right.EDIT),
             RuleState.DENY
+        );
+        assertContainsRule(normalizedInheritedRules,
+            new DocumentReference("xwiki", "XWiki", "XWikiAdminGroup"),
+            true,
+            Arrays.asList(Right.EDIT),
+            RuleState.ALLOW
         );
     }
 
@@ -676,8 +684,8 @@ public class DefaultRightsReaderTest extends AbstractRightsTest
     }
 
     /**
-     * Test that if a parent has a rule that has a right in common with its child for the same subject, the allow rule
-     * is not returned anymore.
+     * Test that if a parent has a rule that has a right in common with its child for the same subject, both deny and
+     * allow are returned.
      */
     @Test
     void getActualRules_Space_WikiSameSubjectOverlappingRightDifferentState() throws Exception
@@ -712,7 +720,7 @@ public class DefaultRightsReaderTest extends AbstractRightsTest
         assertContainsRule(normalizedInheritedRules,
             new DocumentReference("xwiki", "XWiki", "XWikiAdminGroup"),
             true,
-            Arrays.asList(Right.VIEW),
+            Arrays.asList(Right.VIEW, Right.EDIT),
             RuleState.ALLOW
         );
         assertContainsRule(normalizedInheritedRules,
@@ -724,8 +732,7 @@ public class DefaultRightsReaderTest extends AbstractRightsTest
     }
 
     /**
-     * Test that if a parent has a rule that has a right in common with its child for the same subject, the allow rule
-     * is not returned anymore, but the allow above concerning another subject is returned.
+     * Test that the resolution properly stops at the first allow.
      */
     @Test
     void getActualRules_Space_WikiSameSubjectOverlappingRightDifferentStateTwoAllows() throws Exception
@@ -765,12 +772,80 @@ public class DefaultRightsReaderTest extends AbstractRightsTest
         List<ReadableSecurityRule> inheritedRules = this.rightsReader.getActualRules(testedSubSpaceReference);
         List<ReadableSecurityRule> normalizedInheritedRules =
             this.securityRuleAbacus.normalizeRulesBySubject(inheritedRules);
-        assertEquals(2, normalizedInheritedRules.size());
+        assertEquals(3, normalizedInheritedRules.size());
+        assertContainsRule(normalizedInheritedRules,
+            new DocumentReference("xwiki", "XWiki", "XWikiAllGroup"),
+            true,
+            Arrays.asList(Right.VIEW),
+            RuleState.ALLOW
+        );
+        assertContainsRule(normalizedInheritedRules,
+            new DocumentReference("xwiki", "XWiki", "XWikiAdminGroup"),
+            true,
+            Arrays.asList(Right.EDIT),
+            RuleState.ALLOW
+        );
+        assertContainsRule(normalizedInheritedRules,
+            new DocumentReference("xwiki", "XWiki", "XWikiAdminGroup"),
+            true,
+            Arrays.asList(Right.EDIT),
+            RuleState.DENY
+        );
+    }
+
+    /**
+     * Test that all denies are piling up.
+     */
+    @Test
+    void getActualRules_Space_Subspace_WikiMultipleDenies() throws Exception
+    {
+        WikiReference testedWikiReference = new WikiReference("xwiki");
+        SpaceReference testedSpaceReference = new SpaceReference("SP1", testedWikiReference);
+        SpaceReference testedSubSpaceReference = new SpaceReference("SubSP1", testedSpaceReference);
+        // return the following rule for when rules are asked for the wiki...
+        this.mockEntityReferenceRules(testedWikiReference, Arrays.asList(
+            new XWikiSecurityRule(
+                new RightSet(Right.VIEW, Right.EDIT),
+                RuleState.DENY,
+                Collections.emptyList(),
+                Arrays.asList(new DocumentReference("xwiki", "XWiki", "XWikiAllGroup")),
+                true
+            ))
+        );
+        this.mockEntityReferenceRules(testedSpaceReference, Arrays.asList(
+            new XWikiSecurityRule(
+                new RightSet(Right.EDIT),
+                RuleState.DENY,
+                Collections.emptyList(),
+                Arrays.asList(new DocumentReference("xwiki", "XWiki", "XWikiAdminGroup")),
+                true
+            ))
+        );
+        this.mockEntityReferenceRules(testedSubSpaceReference, Arrays.asList(
+            new XWikiSecurityRule(
+                new RightSet(Right.EDIT),
+                RuleState.DENY,
+                Collections.emptyList(),
+                Arrays.asList(new DocumentReference("xwiki", "XWiki", "XWikiOtherGroup")),
+                true
+            ))
+        );
+        // check what gets returned
+        List<ReadableSecurityRule> inheritedRules = this.rightsReader.getActualRules(testedSubSpaceReference);
+        List<ReadableSecurityRule> normalizedInheritedRules =
+            this.securityRuleAbacus.normalizeRulesBySubject(inheritedRules);
+        assertEquals(3, normalizedInheritedRules.size());
         assertContainsRule(normalizedInheritedRules,
             new DocumentReference("xwiki", "XWiki", "XWikiAllGroup"),
             true,
             Arrays.asList(Right.VIEW, Right.EDIT),
-            RuleState.ALLOW
+            RuleState.DENY
+        );
+        assertContainsRule(normalizedInheritedRules,
+            new DocumentReference("xwiki", "XWiki", "XWikiOtherGroup"),
+            true,
+            Arrays.asList(Right.EDIT),
+            RuleState.DENY
         );
         assertContainsRule(normalizedInheritedRules,
             new DocumentReference("xwiki", "XWiki", "XWikiAdminGroup"),
