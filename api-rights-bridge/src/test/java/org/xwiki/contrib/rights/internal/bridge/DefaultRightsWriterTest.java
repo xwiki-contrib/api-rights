@@ -42,6 +42,7 @@ import org.xwiki.model.reference.ObjectReference;
 import org.xwiki.model.reference.SpaceReference;
 import org.xwiki.model.reference.WikiReference;
 import org.xwiki.observation.ObservationManager;
+import org.xwiki.security.authorization.ReadableSecurityRule;
 import org.xwiki.security.authorization.Right;
 import org.xwiki.security.authorization.RightSet;
 import org.xwiki.security.authorization.RuleState;
@@ -70,6 +71,9 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 
 /**
  * @version $Id$
@@ -125,13 +129,22 @@ class DefaultRightsWriterTest extends AbstractRightsWriterTest
     }
 
     @Test
+    void saveWhenNoRule() throws XWikiException
+    {
+        DocumentReference documentReference = new DocumentReference("xwiki", "S", "P");
+        this.rightsWriter.saveRules(Collections.emptyList(), documentReference);
+        verify(this.oldcore.getSpyXWiki(), never()).getDocument(documentReference, this.oldcore.getXWikiContext());
+    }
+
+    @Test
     void saveRulesOnObject() throws XWikiException
     {
         EntityReference objRef = new ObjectReference("XWiki.XWikiComments", new DocumentReference("xwiki", "S", "P"));
 
+        ReadableSecurityRule rule = mock(ReadableSecurityRule.class);
         Exception exc = assertThrows(UnsupportedOperationException.class, () -> {
             // Content throwing exception here
-            this.rightsWriter.saveRules(Collections.emptyList(), objRef);
+            this.rightsWriter.saveRules(Collections.singletonList(rule), objRef);
         });
 
         assertEquals("Could not set rights for the given reference.", exc.getMessage());
@@ -155,12 +168,14 @@ class DefaultRightsWriterTest extends AbstractRightsWriterTest
         // get the document that was just modified and assert on it
         XWikiDocument resultDoc =
             this.oldcore.getSpyXWiki().getDocument(documentReference, this.oldcore.getXWikiContext());
+
         Document resultDocEasyAPI = new Document(resultDoc, this.oldcore.getXWikiContext());
         // check that there is an object set
         assertEquals(1, resultDocEasyAPI.getxWikiObjects().size());
         // check that the object is of the good class and has number 0
         assertEquals(1, resultDocEasyAPI.getObjects("XWiki.XWikiRights").size());
         assertEquals(0, resultDocEasyAPI.getObject("XWiki.XWikiRights").getNumber());
+        assertTrue(resultDoc.isHidden());
     }
 
     @Test
