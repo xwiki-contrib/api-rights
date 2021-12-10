@@ -69,6 +69,7 @@ import com.xpn.xwiki.test.reference.ReferenceComponentList;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
@@ -175,7 +176,7 @@ class DefaultRightsWriterTest extends AbstractRightsWriterTest
         // check that the object is of the good class and has number 0
         assertEquals(1, resultDocEasyAPI.getObjects("XWiki.XWikiRights").size());
         assertEquals(0, resultDocEasyAPI.getObject("XWiki.XWikiRights").getNumber());
-        assertTrue(resultDoc.isHidden());
+        assertFalse(resultDoc.isHidden());
     }
 
     @Test
@@ -242,6 +243,7 @@ class DefaultRightsWriterTest extends AbstractRightsWriterTest
             GroupsClass.getListFromString(objects.get(0).getLargeStringValue("groups")));
         assertEquals("comment", objects.get(0).getLargeStringValue("levels"));
         assertEquals(1, objects.get(0).getIntValue(XWikiConstants.ALLOW_FIELD_NAME));
+        assertTrue(document.isHidden());
     }
 
     /**
@@ -260,6 +262,7 @@ class DefaultRightsWriterTest extends AbstractRightsWriterTest
         XWikiDocument document =
             oldcore.getSpyXWiki().getDocument(xwikiPreferences, oldcore.getXWikiContext());
         assertEquals(1, document.getXObjects(XWIKI_GLOBAL_RIGHTS_CLASS).size());
+        assertTrue(document.isHidden());
         // TODO: assert that the properties are persisted.
     }
 
