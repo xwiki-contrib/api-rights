@@ -63,7 +63,7 @@
     <connection>scm:git:git://github.com/xwiki-contrib/api-rights.git</connection>
     <developerConnection>scm:git:git@github.com:xwiki-contrib/api-rights.git</developerConnection>
     <url>https://github.com/xwiki-contrib/api-rights/tree/master</url>
-    <tag>HEAD</tag>
+    <tag>stable-1.1.x</tag>
   </scm>
   <properties>
     <xwiki.release.jira.skip>false</xwiki.release.jira.skip>
