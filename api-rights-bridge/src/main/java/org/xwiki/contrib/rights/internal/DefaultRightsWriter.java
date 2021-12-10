@@ -94,16 +94,19 @@ public class DefaultRightsWriter extends AbstractRightsWriter
         if (reference != null && !CollectionUtils.isEmpty(rules)) {
             DocumentReference rightsStorageDocReference;
             EntityReference rightsClassReference;
+            boolean storageDocIsPrefsDoc = false;
             switch (reference.getType()) {
                 case WIKI:
                     rightsStorageDocReference = new DocumentReference(RulesObjectWriter.XWIKI_PREFERENCES,
                         new SpaceReference(XWIKI_SPACE, new WikiReference(reference)));
                     rightsClassReference = XWIKI_GLOBAL_RIGHTS_CLASS;
+                    storageDocIsPrefsDoc = true;
                     break;
                 case SPACE:
                     rightsStorageDocReference = new DocumentReference(RulesObjectWriter.XWIKI_WEB_PREFERENCES,
                         new SpaceReference(reference));
                     rightsClassReference = XWIKI_GLOBAL_RIGHTS_CLASS;
+                    storageDocIsPrefsDoc = true;
                     break;
                 case DOCUMENT:
                     // The current reference corresponds to a terminal page.
@@ -123,7 +126,12 @@ public class DefaultRightsWriter extends AbstractRightsWriter
             // In the end, save the document
             rightsStorageDoc.setAuthorReference(context.getUserReference());
 
-            if (rightsStorageDoc.isNew()) {
+            // if the document is newly created now and it's a storage preferences document, initialize it as hidden
+            // (all preferences documents are hidden).
+            // Note: if the caller is explicitly saving rights on a WebPreferences document with a direct document
+            // reference to it, the document will not be set as hidden, it's the caller's responsibility; this rule here
+            // only covers for the case when the prefs document is created for the storage needs.
+            if (rightsStorageDoc.isNew() && storageDocIsPrefsDoc) {
                 rightsStorageDoc.setHidden(true);
             }
             getXWiki().saveDocument(rightsStorageDoc, context);
