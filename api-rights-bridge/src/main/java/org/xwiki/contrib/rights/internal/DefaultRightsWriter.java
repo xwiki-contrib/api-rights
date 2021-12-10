@@ -92,22 +92,22 @@ public class DefaultRightsWriter extends AbstractRightsWriter
     {
         // By deleting the objects, the object number will continue from the number of the deleted object.
         if (reference != null && !CollectionUtils.isEmpty(rules)) {
-            DocumentReference documentReference;
+            DocumentReference rightsStorageDocReference;
             EntityReference rightsClassReference;
             switch (reference.getType()) {
                 case WIKI:
-                    documentReference = new DocumentReference(RulesObjectWriter.XWIKI_PREFERENCES,
+                    rightsStorageDocReference = new DocumentReference(RulesObjectWriter.XWIKI_PREFERENCES,
                         new SpaceReference(XWIKI_SPACE, new WikiReference(reference)));
                     rightsClassReference = XWIKI_GLOBAL_RIGHTS_CLASS;
                     break;
                 case SPACE:
-                    documentReference = new DocumentReference(RulesObjectWriter.XWIKI_WEB_PREFERENCES,
+                    rightsStorageDocReference = new DocumentReference(RulesObjectWriter.XWIKI_WEB_PREFERENCES,
                         new SpaceReference(reference));
                     rightsClassReference = XWIKI_GLOBAL_RIGHTS_CLASS;
                     break;
                 case DOCUMENT:
                     // The current reference corresponds to a terminal page.
-                    documentReference = new DocumentReference(reference);
+                    rightsStorageDocReference = new DocumentReference(reference);
                     rightsClassReference = XWIKI_RIGHTS_CLASS;
                     break;
                 default:
@@ -115,18 +115,18 @@ public class DefaultRightsWriter extends AbstractRightsWriter
             }
             // get document to perform changes on
             XWikiContext context = getXContext();
-            XWikiDocument doc = getXWiki().getDocument(documentReference, context).clone();
+            XWikiDocument rightsStorageDoc = getXWiki().getDocument(rightsStorageDocReference, context).clone();
 
             // write objects according to the chosen strategy
-            rulesWriter.persistRulesToObjects(rules, doc, rightsClassReference, context);
+            rulesWriter.persistRulesToObjects(rules, rightsStorageDoc, rightsClassReference, context);
 
             // In the end, save the document
-            doc.setAuthorReference(context.getUserReference());
+            rightsStorageDoc.setAuthorReference(context.getUserReference());
 
-            if (doc.isNew()) {
-                doc.setHidden(true);
+            if (rightsStorageDoc.isNew()) {
+                rightsStorageDoc.setHidden(true);
             }
-            getXWiki().saveDocument(doc, context);
+            getXWiki().saveDocument(rightsStorageDoc, context);
         }
     }
 
