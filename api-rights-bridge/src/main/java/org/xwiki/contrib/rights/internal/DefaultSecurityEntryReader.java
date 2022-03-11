@@ -27,10 +27,14 @@ import java.util.Set;
 
 import javax.inject.Inject;
 import javax.inject.Named;
+import javax.inject.Provider;
 import javax.inject.Singleton;
 
 import org.apache.commons.lang3.builder.ToStringBuilder;
+import org.slf4j.Logger;
 import org.xwiki.component.annotation.Component;
+import org.xwiki.component.manager.ComponentLookupException;
+import org.xwiki.component.manager.ComponentManager;
 import org.xwiki.context.Execution;
 import org.xwiki.model.EntityType;
 import org.xwiki.model.reference.DocumentReference;
@@ -108,7 +112,14 @@ public class DefaultSecurityEntryReader implements SecurityEntryReader
     private Execution execution;
 
     @Inject
-    private List<SecurityEntryReaderExtra> extras;
+    private Provider<XWikiContext> contextProvider;
+
+    @Inject
+    @Named("context")
+    private Provider<ComponentManager> componentManagerProvider;
+
+    @Inject
+    private Logger logger;
 
     /**
      * Load the rules from wiki documents.
@@ -162,12 +173,27 @@ public class DefaultSecurityEntryReader implements SecurityEntryReader
         // Get standard rules
         Collection<SecurityRule> rules = getSecurityRules(documentReference, classReference, wikiReference);
 
-        for (SecurityEntryReaderExtra extra : this.extras) {
-            Collection<SecurityRule> extraRules = extra.read(entity);
-            if (extraRules != null) {
-                rules.addAll(extraRules);
+        // Add extras rules
+        XWikiContext xcontext = this.contextProvider.get();
+        WikiReference currentWikiReference = xcontext.getWikiReference();
+        try {
+            // Switch to checked entity's wiki to get the right components
+            xcontext.setWikiReference(wikiReference);
+
+            List<SecurityEntryReaderExtra> extras =
+                this.componentManagerProvider.get().getInstanceList(SecurityEntryReaderExtra.class);
+            for (SecurityEntryReaderExtra extra : extras) {
+                Collection<SecurityRule> extraRules = extra.read(entity);
+                if (extraRules != null) {
+                    rules.addAll(extraRules);
+                }
             }
+        } catch (ComponentLookupException e) {
+            this.logger.error("Failed to lookup extra security entry readers", e);
+        } finally {
+            xcontext.setWikiReference(currentWikiReference);
         }
+
         return new InternalSecurityRuleEntry(entity, rules);
     }
 

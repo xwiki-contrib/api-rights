@@ -27,4 +27,7 @@
 <suppressions>
   <!-- Cyclomatic complexity went overboard when quickfixing security issue XWIKI-18386. -->
   <suppress checks="CyclomaticComplexity" files="XWikiSecurityRule.java"/>
+
+  <!-- This is supposed to be temporary until RIGHTSAPI-3 is fixed -->
+  <suppress checks="ClassFanOutComplexity" files="DefaultSecurityEntryReader.java"/>
 </suppressions>
