@@ -38,6 +38,8 @@ import org.xwiki.model.reference.LocalDocumentReference;
 import org.xwiki.model.reference.SpaceReference;
 import org.xwiki.model.reference.WikiReference;
 import org.xwiki.observation.ObservationManager;
+import org.xwiki.observation.event.Event;
+import org.xwiki.observation.remote.RemoteObservationManagerContext;
 import org.xwiki.security.SecurityReference;
 import org.xwiki.security.SecurityReferenceFactory;
 import org.xwiki.security.authorization.ReadableSecurityRule;
@@ -58,6 +60,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 /**
@@ -83,6 +86,9 @@ class RightsObjectEventListenerTest
     @MockComponent
     private SecurityRuleAbacus securityRuleAbacus;
 
+    @MockComponent
+    private RemoteObservationManagerContext remoteObservationManagerContext;
+
     private XWikiSecurityRule mockRightObject(BaseObject baseObjectMock, RuleState state, List<Right> rights,
         Pair<String, List<DocumentReference>> userReferences,
         Pair<String, List<DocumentReference>> groupReferences)
@@ -99,6 +105,14 @@ class RightsObjectEventListenerTest
 
         return
             new XWikiSecurityRule(new HashSet<>(rights), state, userReferences.getRight(), groupReferences.getRight());
+    }
+
+    @Test
+    void onRemoteEvent()
+    {
+        when(this.remoteObservationManagerContext.isRemoteState()).thenReturn(true);
+        this.listener.onEvent(mock(Event.class), null, null);
+        verifyNoInteractions(this.securityRuleAbacus);
     }
 
     @Test
@@ -188,7 +202,7 @@ class RightsObjectEventListenerTest
         List<SecurityRuleDiff> diffList = mock(List.class);
         when(this.securityRuleAbacus.computeRuleDiff(expectedPreviousRules, expectedCurrentRules))
             .thenReturn(diffList);
-        this.listener.processLocalEvent(event, source, null);
+        this.listener.onEvent(event, source, null);
         verify(this.securityRuleAbacus).computeRuleDiff(expectedPreviousRules, expectedCurrentRules);
         verify(this.observationManager)
             .notify(any(RightUpdatedEvent.class), eq(expectedSecurityReference), eq(diffList));
@@ -278,7 +292,7 @@ class RightsObjectEventListenerTest
         List<SecurityRuleDiff> diffList = mock(List.class);
         when(this.securityRuleAbacus.computeRuleDiff(expectedPreviousRules, expectedCurrentRules))
             .thenReturn(diffList);
-        this.listener.processLocalEvent(event, source, null);
+        this.listener.onEvent(event, source, null);
         verify(this.securityRuleAbacus).computeRuleDiff(expectedPreviousRules, expectedCurrentRules);
         verify(this.observationManager)
             .notify(any(RightUpdatedEvent.class), eq(expectedSecurityReference), eq(diffList));
@@ -369,7 +383,7 @@ class RightsObjectEventListenerTest
         List<SecurityRuleDiff> diffList = mock(List.class);
         when(this.securityRuleAbacus.computeRuleDiff(expectedPreviousRules, expectedCurrentRules))
             .thenReturn(diffList);
-        this.listener.processLocalEvent(event, source, null);
+        this.listener.onEvent(event, source, null);
         verify(this.securityRuleAbacus).computeRuleDiff(expectedPreviousRules, expectedCurrentRules);
         verify(this.observationManager)
             .notify(any(RightUpdatedEvent.class), eq(expectedSecurityReference), eq(diffList));
@@ -462,7 +476,7 @@ class RightsObjectEventListenerTest
         List<SecurityRuleDiff> diffList = mock(List.class);
         when(this.securityRuleAbacus.computeRuleDiff(expectedPreviousRules, expectedCurrentRules))
             .thenReturn(diffList);
-        this.listener.processLocalEvent(event, source, null);
+        this.listener.onEvent(event, source, null);
         verify(this.securityRuleAbacus).computeRuleDiff(expectedPreviousRules, expectedCurrentRules);
         verify(this.observationManager)
             .notify(any(RightUpdatedEvent.class), eq(expectedSecurityReference), eq(diffList));
@@ -550,7 +564,7 @@ class RightsObjectEventListenerTest
         List<SecurityRuleDiff> diffList = mock(List.class);
         when(this.securityRuleAbacus.computeRuleDiff(expectedPreviousRules, expectedCurrentRules))
             .thenReturn(diffList);
-        this.listener.processLocalEvent(event, source, null);
+        this.listener.onEvent(event, source, null);
         verify(this.securityRuleAbacus).computeRuleDiff(expectedPreviousRules, expectedCurrentRules);
         verify(this.observationManager)
             .notify(any(RightUpdatedEvent.class), eq(expectedSecurityReference), eq(diffList));
@@ -639,7 +653,7 @@ class RightsObjectEventListenerTest
         List<SecurityRuleDiff> diffList = mock(List.class);
         when(this.securityRuleAbacus.computeRuleDiff(expectedPreviousRules, expectedCurrentRules))
             .thenReturn(diffList);
-        this.listener.processLocalEvent(event, source, null);
+        this.listener.onEvent(event, source, null);
         verify(this.securityRuleAbacus).computeRuleDiff(expectedPreviousRules, expectedCurrentRules);
         verify(this.observationManager)
             .notify(any(RightUpdatedEvent.class), eq(expectedSecurityReference), eq(diffList));

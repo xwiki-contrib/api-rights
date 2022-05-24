@@ -36,9 +36,10 @@ import org.xwiki.model.reference.DocumentReference;
 import org.xwiki.model.reference.DocumentReferenceResolver;
 import org.xwiki.model.reference.EntityReference;
 import org.xwiki.model.reference.WikiReference;
+import org.xwiki.observation.AbstractEventListener;
 import org.xwiki.observation.ObservationManager;
 import org.xwiki.observation.event.Event;
-import org.xwiki.refactoring.internal.listener.AbstractDocumentEventListener;
+import org.xwiki.observation.remote.RemoteObservationManagerContext;
 import org.xwiki.security.SecurityReference;
 import org.xwiki.security.SecurityReferenceFactory;
 import org.xwiki.security.authorization.ReadableSecurityRule;
@@ -60,7 +61,7 @@ import com.xpn.xwiki.objects.BaseObjectReference;
 @Component
 @Named(RightObjectEventListener.NAME)
 @Singleton
-public class RightObjectEventListener extends AbstractDocumentEventListener
+public class RightObjectEventListener extends AbstractEventListener
 {
     static final String NAME = "org.xwiki.contrib.rights.internal.RightObjectEventListener";
 
@@ -76,6 +77,9 @@ public class RightObjectEventListener extends AbstractDocumentEventListener
     @Inject
     private SecurityRuleAbacus securityRuleAbacus;
 
+    @Inject
+    private RemoteObservationManagerContext remoteObservationManagerContext;
+
     /**
      * Default constructor.
      */
@@ -89,37 +93,44 @@ public class RightObjectEventListener extends AbstractDocumentEventListener
     }
 
     @Override
-    public void processLocalEvent(Event event, Object source, Object data)
+    public void onEvent(Event event, Object source, Object data)
     {
-        XObjectEvent xObjectEvent = (XObjectEvent) event;
-        EntityReference reference = xObjectEvent.getReference();
-        BaseObjectReference baseObjectReference = (BaseObjectReference) reference;
-        DocumentReference xClassReference = baseObjectReference.getXClassReference();
-        boolean isGlobalRight =
-            xClassReference.getLocalDocumentReference().equals(XWikiGlobalRightsDocumentInitializer.CLASS_REFERENCE);
-        DocumentReference sourceDocumentReference = baseObjectReference.getDocumentReference();
+        if (!this.remoteObservationManagerContext.isRemoteState()) {
+            XObjectEvent xObjectEvent = (XObjectEvent) event;
+            EntityReference reference = xObjectEvent.getReference();
+            BaseObjectReference baseObjectReference = (BaseObjectReference) reference;
+            DocumentReference xClassReference = baseObjectReference.getXClassReference();
+            boolean isGlobalRight =
+                xClassReference.getLocalDocumentReference()
+                    .equals(XWikiGlobalRightsDocumentInitializer.CLASS_REFERENCE);
+            DocumentReference sourceDocumentReference = baseObjectReference.getDocumentReference();
 
-        EntityReference sourceEntityReference;
-        if (RulesObjectWriter.XWIKI_PREFERENCES.equals(sourceDocumentReference.getName()) && isGlobalRight) {
-            // handle rule update from wiki
-            sourceEntityReference = sourceDocumentReference.getWikiReference();
-        } else if (RulesObjectWriter.XWIKI_WEB_PREFERENCES.equals(sourceDocumentReference.getName()) && isGlobalRight) {
-            // handle rule update from space
-            sourceEntityReference = sourceDocumentReference.getLastSpaceReference();
-        } else {
-            // handle rule update from page
-            sourceEntityReference = sourceDocumentReference;
+            EntityReference sourceEntityReference;
+            if (RulesObjectWriter.XWIKI_PREFERENCES.equals(sourceDocumentReference.getName()) && isGlobalRight) {
+                // handle rule update from wiki
+                sourceEntityReference = sourceDocumentReference.getWikiReference();
+            } else if (RulesObjectWriter.XWIKI_WEB_PREFERENCES.equals(sourceDocumentReference.getName())
+                && isGlobalRight)
+            {
+                // handle rule update from space
+                sourceEntityReference = sourceDocumentReference.getLastSpaceReference();
+            } else {
+                // handle rule update from page
+                sourceEntityReference = sourceDocumentReference;
+            }
+
+            XWikiDocument currentDocument = (XWikiDocument) source;
+            XWikiDocument previousDocument = currentDocument.getOriginalDocument();
+
+            List<ReadableSecurityRule> previousRules = this.getRules(previousDocument, isGlobalRight);
+            List<ReadableSecurityRule> currentRules = this.getRules(currentDocument, isGlobalRight);
+
+            List<SecurityRuleDiff> securityRuleDiffs =
+                this.securityRuleAbacus.computeRuleDiff(previousRules, currentRules);
+            SecurityReference securityReference =
+                this.securityReferenceFactory.newEntityReference(sourceEntityReference);
+            this.observationManager.notify(new RightUpdatedEvent(), securityReference, securityRuleDiffs);
         }
-
-        XWikiDocument currentDocument = (XWikiDocument) source;
-        XWikiDocument previousDocument = currentDocument.getOriginalDocument();
-
-        List<ReadableSecurityRule> previousRules = this.getRules(previousDocument, isGlobalRight);
-        List<ReadableSecurityRule> currentRules = this.getRules(currentDocument, isGlobalRight);
-
-        List<SecurityRuleDiff> securityRuleDiffs = this.securityRuleAbacus.computeRuleDiff(previousRules, currentRules);
-        SecurityReference securityReference = this.securityReferenceFactory.newEntityReference(sourceEntityReference);
-        this.observationManager.notify(new RightUpdatedEvent(), securityReference, securityRuleDiffs);
     }
 
     private List<ReadableSecurityRule> getRules(XWikiDocument document, boolean globalOnly)
