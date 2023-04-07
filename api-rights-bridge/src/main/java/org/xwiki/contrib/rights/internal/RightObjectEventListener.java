@@ -43,6 +43,7 @@ import org.xwiki.observation.remote.RemoteObservationManagerContext;
 import org.xwiki.security.SecurityReference;
 import org.xwiki.security.SecurityReferenceFactory;
 import org.xwiki.security.authorization.ReadableSecurityRule;
+import org.xwiki.security.authorization.cache.SecurityCache;
 
 import com.xpn.xwiki.doc.XWikiDocument;
 import com.xpn.xwiki.internal.event.XObjectEvent;
@@ -76,6 +77,9 @@ public class RightObjectEventListener extends AbstractEventListener
 
     @Inject
     private SecurityRuleAbacus securityRuleAbacus;
+
+    @Inject
+    private SecurityCache securityCache;
 
     @Inject
     private RemoteObservationManagerContext remoteObservationManagerContext;
@@ -118,6 +122,7 @@ public class RightObjectEventListener extends AbstractEventListener
                 // handle rule update from page
                 sourceEntityReference = sourceDocumentReference;
             }
+            securityCache.remove(securityReferenceFactory.newEntityReference(sourceEntityReference));
 
             XWikiDocument currentDocument = (XWikiDocument) source;
             XWikiDocument previousDocument = currentDocument.getOriginalDocument();
