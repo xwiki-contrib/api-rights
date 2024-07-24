@@ -32,5 +32,6 @@ nbproject
 .clover
 *~
 **/overlays/*.info
+.DS_Store
 
 overlays
