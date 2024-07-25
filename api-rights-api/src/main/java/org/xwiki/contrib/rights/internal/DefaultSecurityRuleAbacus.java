@@ -30,6 +30,8 @@ import java.util.stream.Collectors;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 
+import org.apache.commons.lang3.tuple.MutablePair;
+import org.apache.commons.lang3.tuple.Pair;
 import org.apache.commons.lang3.StringUtils;
 import org.xwiki.component.annotation.Component;
 import org.xwiki.contrib.rights.SecurityRuleAbacus;
@@ -38,6 +40,7 @@ import org.xwiki.model.reference.DocumentReference;
 import org.xwiki.model.reference.EntityReferenceSerializer;
 import org.xwiki.security.authorization.ReadableSecurityRule;
 import org.xwiki.security.authorization.RightSet;
+import org.xwiki.security.authorization.RuleState;
 
 /**
  * Default implementation of the {@link org.xwiki.contrib.rights.SecurityRuleAbacus}.
@@ -48,6 +51,10 @@ import org.xwiki.security.authorization.RightSet;
 @Singleton
 public class DefaultSecurityRuleAbacus implements SecurityRuleAbacus
 {
+    private static final String SUBJECT_TYPE_GROUP = "group";
+
+    private static final String SUBJECT_TYPE_USER = "user";
+
     @Inject
     private EntityReferenceSerializer<String> entityReferenceSerializer;
 
@@ -187,5 +194,83 @@ public class DefaultSecurityRuleAbacus implements SecurityRuleAbacus
                 return StringUtils.join(rule1.getRights()).compareTo(StringUtils.join(rule2.getRights()));
             }
         }
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public Map<DocumentReference, Pair<ReadableSecurityRule, ReadableSecurityRule>> getRulesByUniqueSubject(
+        List<ReadableSecurityRule> rules)
+    {
+        return getRulesByUniqueSubject(rules, null);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public Map<DocumentReference, Pair<ReadableSecurityRule, ReadableSecurityRule>> getRulesByUniqueUser(
+        List<ReadableSecurityRule> rules)
+    {
+        return getRulesByUniqueSubject(rules, SUBJECT_TYPE_USER);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public Map<DocumentReference, Pair<ReadableSecurityRule, ReadableSecurityRule>> getRulesByUniqueGroup(
+        List<ReadableSecurityRule> rules)
+    {
+        return getRulesByUniqueSubject(rules, SUBJECT_TYPE_GROUP);
+    }
+
+    /*
+     * Get the Guest user DocumentReference as it is stored in the Database (using a user named XWikiGuest) because in
+     * rule objects Guest user reference is set to null.
+     * @param userDocumentReference a user document reference
+     * @return userDocumentReference as it is if userDocumentReference is not null, otherwise return the guest user
+     * reference (XWiki.XWikiGuest).
+     */
+    private DocumentReference fixDocumentReferenceIfGuestUser(DocumentReference userDocumentReference)
+    {
+        if (userDocumentReference == null) {
+            return new DocumentReference("xwiki", "XWiki", "XWikiGuest");
+        }
+
+        return userDocumentReference;
+    }
+
+    private Map<DocumentReference, Pair<ReadableSecurityRule, ReadableSecurityRule>> getRulesByUniqueSubject(
+        List<ReadableSecurityRule> rules, String subjectType)
+    {
+        Map<DocumentReference, Pair<ReadableSecurityRule, ReadableSecurityRule>> result = new HashMap<>();
+
+        List<ReadableSecurityRule> normalizeRulesBySubject = normalizeRulesBySubject(rules);
+
+        normalizeRulesBySubject.forEach(rule -> {
+            DocumentReference subject = null;
+
+            if ((subjectType == null || SUBJECT_TYPE_USER.equals(subjectType)) && !rule.getUsers().isEmpty()) {
+                subject = fixDocumentReferenceIfGuestUser(rule.getUsers().get(0));
+            } else if ((subjectType == null || SUBJECT_TYPE_GROUP.equals(subjectType)) && !rule.getGroups().isEmpty()) {
+                subject = rule.getGroups().get(0);
+            }
+
+            if (subject != null) {
+                if (!result.containsKey(subject)) {
+                    result.put(subject, new MutablePair());
+                }
+
+                if (RuleState.ALLOW.name().equals(rule.getState().name())) {
+                    ((MutablePair) result.get(subject)).setLeft(rule);
+                } else {
+                    ((MutablePair) result.get(subject)).setRight(rule);
+                }
+            }
+        });
+
+        return result;
     }
 }

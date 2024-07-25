@@ -20,6 +20,7 @@
 package org.xwiki.contrib.rights.internal;
 
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 import javax.inject.Inject;
@@ -27,6 +28,7 @@ import javax.inject.Named;
 import javax.inject.Provider;
 import javax.inject.Singleton;
 
+import org.apache.commons.lang3.tuple.Pair;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.xwiki.component.annotation.Component;
@@ -258,5 +260,44 @@ public class RightsAPIService implements ScriptService
             doc = new DocumentReference(targetEntity);
         }
         return authorization.hasAccess(Right.EDIT, user, doc);
+    }
+
+    /**
+     * Extract rules by unique subject from a set of rules.
+     *
+     * @param rules a list of rules
+     * @return a map where the key is a user or group DocumentReference and the value is a Pair of rules where the left
+     *         rule contains allowed rights and the right rule contains denied rights.
+     */
+    public Map<DocumentReference, Pair<ReadableSecurityRule, ReadableSecurityRule>> getRulesByUniqueSubject(
+        List<ReadableSecurityRule> rules)
+    {
+        return this.securityRuleAbacus.getRulesByUniqueSubject(rules);
+    }
+
+    /**
+     * Extract rules by unique user from a set of rules.
+     *
+     * @param rules a list of rules
+     * @return a map where the key is a user DocumentReference and the value is a Pair of rules where the left rule
+     *         contains allowed rights and the right rule contains denied rights.
+     */
+    public Map<DocumentReference, Pair<ReadableSecurityRule, ReadableSecurityRule>> getRulesByUniqueUser(
+        List<ReadableSecurityRule> rules)
+    {
+        return this.securityRuleAbacus.getRulesByUniqueUser(rules);
+    }
+
+    /**
+     * Extract rules by unique group from a set of rules.
+     *
+     * @param rules a list of rules
+     * @return a map where the key is a group DocumentReference and the value is a Pair of rules where the left rule
+     *         contains allowed rights and the right rule contains denied rights.
+     */
+    public Map<DocumentReference, Pair<ReadableSecurityRule, ReadableSecurityRule>> getRulesByUniqueGroup(
+        List<ReadableSecurityRule> rules)
+    {
+        return this.securityRuleAbacus.getRulesByUniqueGroup(rules);
     }
 }

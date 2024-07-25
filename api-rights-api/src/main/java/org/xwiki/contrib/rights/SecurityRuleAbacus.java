@@ -20,8 +20,11 @@
 package org.xwiki.contrib.rights;
 
 import java.util.List;
+import java.util.Map;
 
+import org.apache.commons.lang3.tuple.Pair;
 import org.xwiki.component.annotation.Role;
+import org.xwiki.model.reference.DocumentReference;
 import org.xwiki.security.authorization.ReadableSecurityRule;
 import org.xwiki.stability.Unstable;
 
@@ -65,4 +68,34 @@ public interface SecurityRuleAbacus
     @Unstable
     List<SecurityRuleDiff> computeRuleDiff(List<ReadableSecurityRule> previousRules,
         List<ReadableSecurityRule> currentRules);
+
+    /**
+     * Extract rules by unique subject from a set of rules.
+     *
+     * @param rules a list of rules
+     * @return a map where the key is a user or group DocumentReference and the value is a Pair of rules where the left
+     *         rule contains allowed rights and the right rule contains denied rights.
+     */
+    Map<DocumentReference, Pair<ReadableSecurityRule, ReadableSecurityRule>> getRulesByUniqueSubject(
+        List<ReadableSecurityRule> rules);
+
+    /**
+     * Extract rules by unique user from a set of rules.
+     *
+     * @param rules a list of rules
+     * @return a map where the key is a user DocumentReference and the value is a Pair of rules where the left rule
+     *         contains allowed rights and the right rule contains denied rights.
+     */
+    Map<DocumentReference, Pair<ReadableSecurityRule, ReadableSecurityRule>> getRulesByUniqueUser(
+        List<ReadableSecurityRule> rules);
+
+    /**
+     * Extract rules by unique group from a set of rules.
+     *
+     * @param rules a list of rules
+     * @return a map where the key is a group DocumentReference and the value is a Pair of rules where the left rule
+     *         contains allowed rights and the right rule contains denied rights.
+     */
+    Map<DocumentReference, Pair<ReadableSecurityRule, ReadableSecurityRule>> getRulesByUniqueGroup(
+        List<ReadableSecurityRule> rules);
 }
