@@ -93,7 +93,9 @@ public interface SecurityRuleAbacus
      * @param rules A list of rules
      * @return A map where the key is a subject (user/group) DocumentReference and the value is a Pair of rules where
      *         the left rule contains allowed rights and the right rule contains denied rights.
+     * @since 2.2
      */
+    @Unstable
     Map<DocumentReference, Pair<ReadableSecurityRule, ReadableSecurityRule>> organizeRulesBySubjectAndState(
         List<ReadableSecurityRule> rules);
 }

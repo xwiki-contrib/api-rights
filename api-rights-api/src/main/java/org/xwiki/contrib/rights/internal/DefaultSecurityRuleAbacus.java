@@ -28,6 +28,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 import javax.inject.Inject;
+import javax.inject.Provider;
 import javax.inject.Singleton;
 
 import org.apache.commons.lang3.tuple.MutablePair;
@@ -41,6 +42,9 @@ import org.xwiki.model.reference.EntityReferenceSerializer;
 import org.xwiki.security.authorization.ReadableSecurityRule;
 import org.xwiki.security.authorization.RightSet;
 import org.xwiki.security.authorization.RuleState;
+import org.xwiki.security.internal.XWikiConstants;
+
+import com.xpn.xwiki.XWikiContext;
 
 /**
  * Default implementation of the {@link org.xwiki.contrib.rights.SecurityRuleAbacus}.
@@ -53,6 +57,9 @@ public class DefaultSecurityRuleAbacus implements SecurityRuleAbacus
 {
     @Inject
     private EntityReferenceSerializer<String> entityReferenceSerializer;
+
+    @Inject
+    private Provider<XWikiContext> xcontextProvider;
 
     /**
      * {@inheritDoc}
@@ -261,7 +268,8 @@ public class DefaultSecurityRuleAbacus implements SecurityRuleAbacus
     private DocumentReference fixDocumentReferenceIfGuestUser(DocumentReference userDocumentReference)
     {
         if (userDocumentReference == null) {
-            return new DocumentReference("xwiki", "XWiki", "XWikiGuest");
+            return new DocumentReference(xcontextProvider.get().getMainXWiki(), XWikiConstants.XWIKI_SPACE,
+                XWikiConstants.GUEST_USER);
         }
 
         return userDocumentReference;
