@@ -70,32 +70,30 @@ public interface SecurityRuleAbacus
         List<ReadableSecurityRule> currentRules);
 
     /**
-     * Extract rules by unique subject from a set of rules.
+     * Extract rules whose subject is a user from a set of rules. Returned rules are normalized, check the
+     * {@link #normalizeRulesBySubject(List<ReadableSecurityRule>)} method.
      *
-     * @param rules a list of rules
-     * @return a map where the key is a user or group DocumentReference and the value is a Pair of rules where the left
-     *         rule contains allowed rights and the right rule contains denied rights.
+     * @param rules A list of rules
+     * @return The list of user rules
      */
-    Map<DocumentReference, Pair<ReadableSecurityRule, ReadableSecurityRule>> getRulesByUniqueSubject(
-        List<ReadableSecurityRule> rules);
+    List<ReadableSecurityRule> getUserRulesNormalized(List<ReadableSecurityRule> rules);
 
     /**
-     * Extract rules by unique user from a set of rules.
+     * Extract rules whose subject is a group from a set of rules. Returned rules are normalized, check the
+     * {@link #normalizeRulesBySubject(List<ReadableSecurityRule>)} method.
      *
-     * @param rules a list of rules
-     * @return a map where the key is a user DocumentReference and the value is a Pair of rules where the left rule
-     *         contains allowed rights and the right rule contains denied rights.
+     * @param rules A list of rules
+     * @return The list of group rules
      */
-    Map<DocumentReference, Pair<ReadableSecurityRule, ReadableSecurityRule>> getRulesByUniqueUser(
-        List<ReadableSecurityRule> rules);
+    List<ReadableSecurityRule> getGroupRulesNormalized(List<ReadableSecurityRule> rules);
 
     /**
-     * Extract rules by unique group from a set of rules.
+     * Organize a set of rules based on subject reference and rule state (Allow/Deny).
      *
-     * @param rules a list of rules
-     * @return a map where the key is a group DocumentReference and the value is a Pair of rules where the left rule
-     *         contains allowed rights and the right rule contains denied rights.
+     * @param rules A list of rules
+     * @return A map where the key is a subject (user/group) DocumentReference and the value is a Pair of rules where
+     *         the left rule contains allowed rights and the right rule contains denied rights.
      */
-    Map<DocumentReference, Pair<ReadableSecurityRule, ReadableSecurityRule>> getRulesByUniqueGroup(
+    Map<DocumentReference, Pair<ReadableSecurityRule, ReadableSecurityRule>> organizeRulesBySubjectAndState(
         List<ReadableSecurityRule> rules);
 }

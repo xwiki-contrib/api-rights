@@ -51,10 +51,6 @@ import org.xwiki.security.authorization.RuleState;
 @Singleton
 public class DefaultSecurityRuleAbacus implements SecurityRuleAbacus
 {
-    private static final String SUBJECT_TYPE_GROUP = "group";
-
-    private static final String SUBJECT_TYPE_USER = "user";
-
     @Inject
     private EntityReferenceSerializer<String> entityReferenceSerializer;
 
@@ -200,50 +196,31 @@ public class DefaultSecurityRuleAbacus implements SecurityRuleAbacus
      * {@inheritDoc}
      */
     @Override
-    public Map<DocumentReference, Pair<ReadableSecurityRule, ReadableSecurityRule>> getRulesByUniqueSubject(
-        List<ReadableSecurityRule> rules)
+    public List<ReadableSecurityRule> getUserRulesNormalized(List<ReadableSecurityRule> rules)
     {
-        return getRulesByUniqueSubject(rules, null);
+        List<ReadableSecurityRule> normalizeRulesBySubject = normalizeRulesBySubject(rules);
+
+        return normalizeRulesBySubject.stream().filter(rule -> !rule.getUsers().isEmpty()).collect(Collectors.toList());
     }
 
     /**
      * {@inheritDoc}
      */
     @Override
-    public Map<DocumentReference, Pair<ReadableSecurityRule, ReadableSecurityRule>> getRulesByUniqueUser(
-        List<ReadableSecurityRule> rules)
+    public List<ReadableSecurityRule> getGroupRulesNormalized(List<ReadableSecurityRule> rules)
     {
-        return getRulesByUniqueSubject(rules, SUBJECT_TYPE_USER);
+        List<ReadableSecurityRule> normalizeRulesBySubject = normalizeRulesBySubject(rules);
+
+        return normalizeRulesBySubject.stream().filter(rule -> !rule.getGroups().isEmpty())
+            .collect(Collectors.toList());
     }
 
     /**
      * {@inheritDoc}
      */
     @Override
-    public Map<DocumentReference, Pair<ReadableSecurityRule, ReadableSecurityRule>> getRulesByUniqueGroup(
+    public Map<DocumentReference, Pair<ReadableSecurityRule, ReadableSecurityRule>> organizeRulesBySubjectAndState(
         List<ReadableSecurityRule> rules)
-    {
-        return getRulesByUniqueSubject(rules, SUBJECT_TYPE_GROUP);
-    }
-
-    /*
-     * Get the Guest user DocumentReference as it is stored in the Database (using a user named XWikiGuest) because in
-     * rule objects Guest user reference is set to null.
-     * @param userDocumentReference a user document reference
-     * @return userDocumentReference as it is if userDocumentReference is not null, otherwise return the guest user
-     * reference (XWiki.XWikiGuest).
-     */
-    private DocumentReference fixDocumentReferenceIfGuestUser(DocumentReference userDocumentReference)
-    {
-        if (userDocumentReference == null) {
-            return new DocumentReference("xwiki", "XWiki", "XWikiGuest");
-        }
-
-        return userDocumentReference;
-    }
-
-    private Map<DocumentReference, Pair<ReadableSecurityRule, ReadableSecurityRule>> getRulesByUniqueSubject(
-        List<ReadableSecurityRule> rules, String subjectType)
     {
         Map<DocumentReference, Pair<ReadableSecurityRule, ReadableSecurityRule>> result = new HashMap<>();
 
@@ -252,9 +229,9 @@ public class DefaultSecurityRuleAbacus implements SecurityRuleAbacus
         normalizeRulesBySubject.forEach(rule -> {
             DocumentReference subject = null;
 
-            if ((subjectType == null || SUBJECT_TYPE_USER.equals(subjectType)) && !rule.getUsers().isEmpty()) {
+            if (!rule.getUsers().isEmpty()) {
                 subject = fixDocumentReferenceIfGuestUser(rule.getUsers().get(0));
-            } else if ((subjectType == null || SUBJECT_TYPE_GROUP.equals(subjectType)) && !rule.getGroups().isEmpty()) {
+            } else if (!rule.getGroups().isEmpty()) {
                 subject = rule.getGroups().get(0);
             }
 
@@ -272,5 +249,21 @@ public class DefaultSecurityRuleAbacus implements SecurityRuleAbacus
         });
 
         return result;
+    }
+
+    /*
+     * Get the Guest user DocumentReference as it is stored in the Database (using a user named XWikiGuest) because in
+     * rule objects Guest user reference is set to null.
+     * @param userDocumentReference a user document reference
+     * @return userDocumentReference as it is if userDocumentReference is not null, otherwise return the guest user
+     * reference (XWiki.XWikiGuest).
+     */
+    private DocumentReference fixDocumentReferenceIfGuestUser(DocumentReference userDocumentReference)
+    {
+        if (userDocumentReference == null) {
+            return new DocumentReference("xwiki", "XWiki", "XWikiGuest");
+        }
+
+        return userDocumentReference;
     }
 }
