@@ -49,5 +49,9 @@
       <artifactId>xwiki-platform-security-authorization-bridge</artifactId>
       <version>${platform.version}</version>
     </dependency>
+    <dependency>
+      <groupId>org.apache.commons</groupId>
+      <artifactId>commons-lang3</artifactId>
+    </dependency>
   </dependencies>
 </project>
