@@ -20,6 +20,7 @@
 package org.xwiki.contrib.rights.internal;
 
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 import javax.inject.Inject;
@@ -27,6 +28,7 @@ import javax.inject.Named;
 import javax.inject.Provider;
 import javax.inject.Singleton;
 
+import org.apache.commons.lang3.tuple.Pair;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.xwiki.component.annotation.Component;
@@ -258,5 +260,42 @@ public class RightsAPIService implements ScriptService
             doc = new DocumentReference(targetEntity);
         }
         return authorization.hasAccess(Right.EDIT, user, doc);
+    }
+
+    /**
+     * Extract rules whose subject is a user from a set of rules. Returned rules are normalized, check the
+     * {@link #normalizeRulesBySubject(List<ReadableSecurityRule>)} method.
+     *
+     * @param rules A list of rules
+     * @return The list of user rules
+     */
+    public List<ReadableSecurityRule> getUserRulesNormalized(List<ReadableSecurityRule> rules)
+    {
+        return this.securityRuleAbacus.getUserRulesNormalized(rules);
+    }
+
+    /**
+     * Extract rules whose subject is a group from a set of rules. Returned rules are normalized, check the
+     * {@link #normalizeRulesBySubject(List<ReadableSecurityRule>)} method.
+     *
+     * @param rules A list of rules
+     * @return The list of group rules
+     */
+    public List<ReadableSecurityRule> getGroupRulesNormalized(List<ReadableSecurityRule> rules)
+    {
+        return this.securityRuleAbacus.getGroupRulesNormalized(rules);
+    }
+
+    /**
+     * Organize a set of rules based on subject reference and rule state (Allow/Deny).
+     *
+     * @param rules A list of rules
+     * @return A map where the key is a subject (user/group) DocumentReference and the value is a Pair of rules where
+     *         the left rule contains allowed rights and the right rule contains denied rights.
+     */
+    public Map<DocumentReference, Pair<ReadableSecurityRule, ReadableSecurityRule>> organizeRulesBySubjectAndState(
+        List<ReadableSecurityRule> rules)
+    {
+        return this.securityRuleAbacus.organizeRulesBySubjectAndState(rules);
     }
 }

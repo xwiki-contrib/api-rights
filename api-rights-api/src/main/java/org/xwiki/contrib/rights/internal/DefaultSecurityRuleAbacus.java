@@ -28,8 +28,11 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 import javax.inject.Inject;
+import javax.inject.Provider;
 import javax.inject.Singleton;
 
+import org.apache.commons.lang3.tuple.MutablePair;
+import org.apache.commons.lang3.tuple.Pair;
 import org.apache.commons.lang3.StringUtils;
 import org.xwiki.component.annotation.Component;
 import org.xwiki.contrib.rights.SecurityRuleAbacus;
@@ -38,6 +41,10 @@ import org.xwiki.model.reference.DocumentReference;
 import org.xwiki.model.reference.EntityReferenceSerializer;
 import org.xwiki.security.authorization.ReadableSecurityRule;
 import org.xwiki.security.authorization.RightSet;
+import org.xwiki.security.authorization.RuleState;
+import org.xwiki.security.internal.XWikiConstants;
+
+import com.xpn.xwiki.XWikiContext;
 
 /**
  * Default implementation of the {@link org.xwiki.contrib.rights.SecurityRuleAbacus}.
@@ -50,6 +57,9 @@ public class DefaultSecurityRuleAbacus implements SecurityRuleAbacus
 {
     @Inject
     private EntityReferenceSerializer<String> entityReferenceSerializer;
+
+    @Inject
+    private Provider<XWikiContext> xcontextProvider;
 
     /**
      * {@inheritDoc}
@@ -187,5 +197,81 @@ public class DefaultSecurityRuleAbacus implements SecurityRuleAbacus
                 return StringUtils.join(rule1.getRights()).compareTo(StringUtils.join(rule2.getRights()));
             }
         }
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public List<ReadableSecurityRule> getUserRulesNormalized(List<ReadableSecurityRule> rules)
+    {
+        List<ReadableSecurityRule> normalizeRulesBySubject = normalizeRulesBySubject(rules);
+
+        return normalizeRulesBySubject.stream().filter(rule -> !rule.getUsers().isEmpty()).collect(Collectors.toList());
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public List<ReadableSecurityRule> getGroupRulesNormalized(List<ReadableSecurityRule> rules)
+    {
+        List<ReadableSecurityRule> normalizeRulesBySubject = normalizeRulesBySubject(rules);
+
+        return normalizeRulesBySubject.stream().filter(rule -> !rule.getGroups().isEmpty())
+            .collect(Collectors.toList());
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public Map<DocumentReference, Pair<ReadableSecurityRule, ReadableSecurityRule>> organizeRulesBySubjectAndState(
+        List<ReadableSecurityRule> rules)
+    {
+        Map<DocumentReference, Pair<ReadableSecurityRule, ReadableSecurityRule>> result = new HashMap<>();
+
+        List<ReadableSecurityRule> normalizeRulesBySubject = normalizeRulesBySubject(rules);
+
+        normalizeRulesBySubject.forEach(rule -> {
+            DocumentReference subject = null;
+
+            if (!rule.getUsers().isEmpty()) {
+                subject = fixDocumentReferenceIfGuestUser(rule.getUsers().get(0));
+            } else if (!rule.getGroups().isEmpty()) {
+                subject = rule.getGroups().get(0);
+            }
+
+            if (subject != null) {
+                if (!result.containsKey(subject)) {
+                    result.put(subject, new MutablePair());
+                }
+
+                if (RuleState.ALLOW.name().equals(rule.getState().name())) {
+                    ((MutablePair) result.get(subject)).setLeft(rule);
+                } else {
+                    ((MutablePair) result.get(subject)).setRight(rule);
+                }
+            }
+        });
+
+        return result;
+    }
+
+    /*
+     * Get the Guest user DocumentReference as it is stored in the Database (using a user named XWikiGuest) because in
+     * rule objects Guest user reference is set to null.
+     * @param userDocumentReference a user document reference
+     * @return userDocumentReference as it is if userDocumentReference is not null, otherwise return the guest user
+     * reference (XWiki.XWikiGuest).
+     */
+    private DocumentReference fixDocumentReferenceIfGuestUser(DocumentReference userDocumentReference)
+    {
+        if (userDocumentReference == null) {
+            return new DocumentReference(xcontextProvider.get().getMainXWiki(), XWikiConstants.XWIKI_SPACE,
+                XWikiConstants.GUEST_USER);
+        }
+
+        return userDocumentReference;
     }
 }
