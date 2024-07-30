@@ -19,10 +19,13 @@
  */
 package org.xwiki.contrib.rights.internal;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 
+import org.apache.commons.lang3.tuple.Pair;
 import org.junit.jupiter.api.Test;
 import org.xwiki.contrib.rights.RightsReader;
 import org.xwiki.contrib.rights.SecurityRuleDiff;
@@ -44,6 +47,9 @@ import com.xpn.xwiki.internal.model.reference.CurrentMixedEntityReferenceProvide
 import com.xpn.xwiki.internal.model.reference.CurrentMixedStringDocumentReferenceResolver;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * @version $Id$
@@ -568,5 +574,143 @@ public class DefaultSecurityRuleAbacusTest extends AbstractRightsTest
             Collections.emptySet()
         );
         assertEquals(expectedDiff4, securityRuleDiffs.get(3));
+    }
+
+    /**
+     * Tests that only the rules whose subject is a user are extracted from a set of rules containing both user and
+     * group subjects and test that the resulted rules are normalized
+     */
+    @Test
+    void getUserRulesNormalized()
+    {
+        DocumentReference group1DocumentReference = new DocumentReference("xwiki", "XWiki", "XWikiAdminGroup");
+        DocumentReference group2DocumentReference = new DocumentReference("xwiki", "XWiki", "XWikiAllGroup");
+        DocumentReference user1DocumentReference = new DocumentReference("xwiki", "XWiki", "JohnDoe");
+        DocumentReference user2DocumentReference = new DocumentReference("xwiki", "XWiki", "JaneDoe");
+
+        List<ReadableSecurityRule> rules = Arrays.asList(
+            new WritableSecurityRuleImpl(Arrays.asList(group1DocumentReference, group2DocumentReference),
+                Arrays.asList(user1DocumentReference), new RightSet(Right.VIEW, Right.COMMENT), RuleState.ALLOW),
+            new WritableSecurityRuleImpl(Collections.emptyList(), Arrays.asList(user2DocumentReference),
+                new RightSet(Right.EDIT), RuleState.ALLOW),
+            new WritableSecurityRuleImpl(Collections.emptyList(), Arrays.asList(user1DocumentReference),
+                new RightSet(Right.EDIT), RuleState.ALLOW));
+
+        List<ReadableSecurityRule> userRulesNormalized = this.securityRuleAbacus.getUserRulesNormalized(rules);
+
+        // Test the number of results
+        assertEquals(2, userRulesNormalized.size());
+
+        // Expect to have 1 rule for JohDoe with view, comment, and edit rights allowed and one rule for JaneDoe with
+        // edit right allowed.
+        assertContainsRule(userRulesNormalized, new DocumentReference("xwiki", "XWiki", "JohnDoe"), false,
+            Arrays.asList(Right.VIEW, Right.COMMENT, Right.EDIT), RuleState.ALLOW);
+        assertContainsRule(userRulesNormalized, new DocumentReference("xwiki", "XWiki", "JaneDoe"), false,
+            Arrays.asList(Right.EDIT), RuleState.ALLOW);
+    }
+
+    /**
+     * Tests that only the rules whose subject is a group are extracted from a set of rules containing both user and
+     * group subjects and test that the resulted rules are normalized
+     */
+    @Test
+    void getGroupRulesNormalized()
+    {
+        DocumentReference group1DocumentReference = new DocumentReference("xwiki", "XWiki", "XWikiAdminGroup");
+        DocumentReference group2DocumentReference = new DocumentReference("xwiki", "XWiki", "CustomGroup");
+        DocumentReference group3DocumentReference = new DocumentReference("xwiki", "XWiki", "XWikiAllGroup");
+        DocumentReference user1DocumentReference = new DocumentReference("xwiki", "XWiki", "JohnDoe");
+        DocumentReference user2DocumentReference = new DocumentReference("xwiki", "XWiki", "JaneDoe");
+
+        List<ReadableSecurityRule> rules = Arrays.asList(
+            new WritableSecurityRuleImpl(Arrays.asList(group1DocumentReference, group2DocumentReference),
+                Arrays.asList(user1DocumentReference), new RightSet(Right.VIEW, Right.EDIT), RuleState.ALLOW),
+            new WritableSecurityRuleImpl(Arrays.asList(group3DocumentReference), Arrays.asList(user2DocumentReference),
+                new RightSet(Right.VIEW), RuleState.DENY));
+
+        List<ReadableSecurityRule> groupRulesNormalized = this.securityRuleAbacus.getGroupRulesNormalized(rules);
+
+        // Test the number of results
+        assertEquals(3, groupRulesNormalized.size());
+
+        // Expect to have one rule for XWikiAdminGroup with view and edit rights allowed, one rule for CustomGroup with
+        // view and edit rights allowed, and one rule for XWikiAllGroup with view right denied.
+        assertContainsRule(groupRulesNormalized, group1DocumentReference, true, Arrays.asList(Right.VIEW, Right.EDIT),
+            RuleState.ALLOW);
+        assertContainsRule(groupRulesNormalized, group2DocumentReference, true, Arrays.asList(Right.VIEW, Right.EDIT),
+            RuleState.ALLOW);
+        assertContainsRule(groupRulesNormalized, group3DocumentReference, true, Arrays.asList(Right.VIEW),
+            RuleState.DENY);
+    }
+
+    /**
+     * Tests that rules are organized by subject and state
+     */
+    @Test
+    void organizeRulesBySubjectAndState()
+    {
+        DocumentReference groupDocumentReference = new DocumentReference("xwiki", "XWiki", "XWikiAllGroup");
+        DocumentReference userDocumentReference = new DocumentReference("xwiki", "XWiki", "JohnDoe");
+
+        List<ReadableSecurityRule> rules = Arrays.asList(
+            new WritableSecurityRuleImpl(Arrays.asList(groupDocumentReference), Arrays.asList(userDocumentReference),
+                new RightSet(Right.VIEW, Right.COMMENT), RuleState.ALLOW),
+            new WritableSecurityRuleImpl(Arrays.asList(groupDocumentReference), Arrays.asList(userDocumentReference),
+                new RightSet(Right.EDIT), RuleState.ALLOW),
+            new WritableSecurityRuleImpl(Collections.emptyList(), Arrays.asList(userDocumentReference),
+                new RightSet(Right.DELETE), RuleState.DENY));
+
+        Map<DocumentReference, Pair<ReadableSecurityRule, ReadableSecurityRule>> organizedRules =
+            this.securityRuleAbacus.organizeRulesBySubjectAndState(rules);
+
+        // Expect to have a Map of results with 2 entries
+        assertEquals(2, organizedRules.size());
+
+        // Expect one entry with key=JohnDoe DocumentReference and value=Pair{(rule with view,comment, edit rights
+        // allowed), (rule with delete right denied)}
+        assertTrue(organizedRules.containsKey(userDocumentReference));
+        assertNotNull(organizedRules.get(userDocumentReference));
+        assertNotNull(organizedRules.get(userDocumentReference).getLeft());
+        assertContainsRule(Arrays.asList(organizedRules.get(userDocumentReference).getLeft()), userDocumentReference,
+            false, Arrays.asList(Right.VIEW, Right.COMMENT, Right.EDIT), RuleState.ALLOW);
+        assertNotNull(organizedRules.get(userDocumentReference).getRight());
+        assertContainsRule(Arrays.asList(organizedRules.get(userDocumentReference).getRight()), userDocumentReference,
+            false, Arrays.asList(Right.DELETE), RuleState.DENY);
+
+        // Expect one entry with key=XWikiAllGroup DocumentReference and value=Pair{(rule with view,comment, edit rights
+        // allowed), null}
+        assertTrue(organizedRules.containsKey(groupDocumentReference));
+        assertNotNull(organizedRules.get(groupDocumentReference));
+        assertNotNull(organizedRules.get(groupDocumentReference).getLeft());
+        assertContainsRule(Arrays.asList(organizedRules.get(groupDocumentReference).getLeft()), groupDocumentReference,
+            true, Arrays.asList(Right.VIEW, Right.COMMENT, Right.EDIT), RuleState.ALLOW);
+        assertNull(organizedRules.get(groupDocumentReference).getRight());
+    }
+
+    /**
+     * XWiki Guest user subject is stored as null value in rule objects, so, the objective of this test is to make sure
+     * that the correct Guest user DocumentReference (XWiki.XWikiGuest) is returned by the
+     * organizeRulesBySubjectAndState() method
+     */
+    @Test
+    void organizeRulesBySubjectAndState_GuestUser()
+    {
+        DocumentReference guestDocumentReference = new DocumentReference("xwiki", "XWiki", "XWikiGuest");
+        ArrayList<DocumentReference> userList = new ArrayList<DocumentReference>();
+        userList.add(null);
+        List<ReadableSecurityRule> rules = Arrays.asList(
+            new WritableSecurityRuleImpl(Collections.emptyList(), userList, new RightSet(Right.VIEW), RuleState.ALLOW));
+
+        Map<DocumentReference, Pair<ReadableSecurityRule, ReadableSecurityRule>> organizedRules =
+            this.securityRuleAbacus.organizeRulesBySubjectAndState(rules);
+
+        // Expect to have a Map of results with 1 entry with Key=XWiki.XWikiGuest and value=Pair{(rule with view right
+        // allowed), null}
+        assertEquals(1, organizedRules.size());
+        assertNotNull(organizedRules.get(guestDocumentReference));
+        assertNotNull(organizedRules.get(guestDocumentReference).getLeft());
+        assertContainsRule(Arrays.asList(organizedRules.get(guestDocumentReference).getLeft()), null, false,
+            Arrays.asList(Right.VIEW), RuleState.ALLOW);
+        assertNull(organizedRules.get(guestDocumentReference).getRight());
     }
 }

@@ -55,6 +55,8 @@ import com.xpn.xwiki.XWikiContext;
 @Singleton
 public class DefaultSecurityRuleAbacus implements SecurityRuleAbacus
 {
+    private static final String MAIN_WIKI_DEFAULT_NAME = "xwiki";
+
     @Inject
     private EntityReferenceSerializer<String> entityReferenceSerializer;
 
@@ -268,8 +270,12 @@ public class DefaultSecurityRuleAbacus implements SecurityRuleAbacus
     private DocumentReference fixDocumentReferenceIfGuestUser(DocumentReference userDocumentReference)
     {
         if (userDocumentReference == null) {
-            return new DocumentReference(xcontextProvider.get().getMainXWiki(), XWikiConstants.XWIKI_SPACE,
-                XWikiConstants.GUEST_USER);
+            String mainWikiName = xcontextProvider.get().getMainXWiki();
+            if (StringUtils.trimToNull(mainWikiName) == null) {
+                mainWikiName = MAIN_WIKI_DEFAULT_NAME;
+            }
+
+            return new DocumentReference(mainWikiName, XWikiConstants.XWIKI_SPACE, XWikiConstants.GUEST_USER);
         }
 
         return userDocumentReference;
