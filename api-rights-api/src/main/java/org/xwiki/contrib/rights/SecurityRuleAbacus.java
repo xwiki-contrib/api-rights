@@ -71,7 +71,7 @@ public interface SecurityRuleAbacus
 
     /**
      * Extract rules whose subject is a user from a set of rules. Returned rules are normalized, check the
-     * {@link #normalizeRulesBySubject(List<ReadableSecurityRule>)} method.
+     * {@link #normalizeRulesBySubject(List) normalizeRulesBySubject(List&lt;ReadableSecurityRule&gt;)} method.
      *
      * @param rules A list of rules
      * @return The list of user rules
@@ -80,7 +80,7 @@ public interface SecurityRuleAbacus
 
     /**
      * Extract rules whose subject is a group from a set of rules. Returned rules are normalized, check the
-     * {@link #normalizeRulesBySubject(List<ReadableSecurityRule>)} method.
+     * {@link #normalizeRulesBySubject(List) normalizeRulesBySubject(List&lt;ReadableSecurityRule&gt;)} method.
      *
      * @param rules A list of rules
      * @return The list of group rules
