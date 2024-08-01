@@ -62,6 +62,7 @@ import com.xpn.xwiki.test.junit5.mockito.InjectMockitoOldcore;
 import com.xpn.xwiki.test.junit5.mockito.OldcoreTest;
 import com.xpn.xwiki.test.reference.ReferenceComponentList;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -441,7 +442,8 @@ class DefaultRightsWriterTest extends AbstractRightsWriterTest
             this.oldcore.getSpyXWiki().getDocument(documentReference, this.oldcore.getXWikiContext());
 
         // check that the right object was removed
-        assertEquals(0, resultDoc.getXObjects(DefaultRightsWriter.XWIKI_RIGHTS_CLASS).size());
+        // Note the object still be in the map, but it's set to null.
+        assertNull(resultDoc.getXObject(DefaultRightsWriter.XWIKI_RIGHTS_CLASS));
     }
 
     @Test
