@@ -125,10 +125,10 @@ class DefaultRightsWriterTest extends AbstractRightsWriterTest
     }
 
     @Test
-    void saveWhenNoRule() throws XWikiException
+    void saveWhenRuleIsNull() throws XWikiException
     {
         DocumentReference documentReference = new DocumentReference("xwiki", "S", "P");
-        this.rightsWriter.saveRules(Collections.emptyList(), documentReference);
+        this.rightsWriter.saveRules(null, documentReference);
         verify(this.oldcore.getSpyXWiki(), never()).getDocument(documentReference, this.oldcore.getXWikiContext());
     }
 
@@ -407,6 +407,38 @@ class DefaultRightsWriterTest extends AbstractRightsWriterTest
         assertEquals("", rightsObj.getLargeStringValue(USERS_PROPERTY));
         assertEquals("XWiki.XWikiAdminGroup", rightsObj.getLargeStringValue(GROUPS_PROPERTY));
         assertEquals(1, rightsObj.getIntValue(ALLOW_PROPERTY));
+    }
+
+    @Test
+    void testSaveRuleWithEmptyRightsList() throws XWikiException
+    {
+        DocumentReference documentReference = new DocumentReference("xwiki", "S", "P");
+        // prepare rules to put on the document, with empty rights set
+        WritableSecurityRule rule = new WritableSecurityRuleImpl(
+            Collections.singletonList(new DocumentReference("xwiki", "XWiki", "XWikiAdminGroup")),
+            Collections.emptyList(), new RightSet(Right.VIEW), RuleState.ALLOW);
+
+        // call the function under test
+        this.rightsWriter.saveRules(Arrays.asList(rule), documentReference);
+
+        // get the document that was just modified and assert on it
+        XWikiDocument resultDoc =
+            this.oldcore.getSpyXWiki().getDocument(documentReference, this.oldcore.getXWikiContext());
+        // check that there is a single object set
+        assertEquals(1, resultDoc.getXObjects(DefaultRightsWriter.XWIKI_RIGHTS_CLASS).size());
+        BaseObject rightsObj = resultDoc.getXObject(DefaultRightsWriter.XWIKI_RIGHTS_CLASS);
+        // check that the allow is set to default true
+        assertEquals(1, rightsObj.getIntValue(ALLOW_PROPERTY));
+        // and the rest of the object is set properly, as we asked for
+        assertEquals("", rightsObj.getLargeStringValue(USERS_PROPERTY));
+        assertEquals("XWiki.XWikiAdminGroup", rightsObj.getLargeStringValue(GROUPS_PROPERTY));
+        assertEquals(1, rightsObj.getIntValue(ALLOW_PROPERTY));
+
+        // Clean all rights objects
+        this.rightsWriter.saveRules(Collections.emptyList(), documentReference);
+
+        // check that the right object was removed
+        assertEquals(0, resultDoc.getXObjects(DefaultRightsWriter.XWIKI_RIGHTS_CLASS).size());
     }
 
     @Test

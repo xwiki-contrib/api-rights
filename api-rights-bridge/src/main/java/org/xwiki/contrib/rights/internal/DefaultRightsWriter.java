@@ -26,7 +26,6 @@ import javax.inject.Named;
 import javax.inject.Provider;
 import javax.inject.Singleton;
 
-import org.apache.commons.collections4.CollectionUtils;
 import org.xwiki.component.annotation.Component;
 import org.xwiki.component.manager.ComponentLookupException;
 import org.xwiki.component.manager.ComponentManager;
@@ -91,7 +90,7 @@ public class DefaultRightsWriter extends AbstractRightsWriter
         throws XWikiException, UnsupportedOperationException
     {
         // By deleting the objects, the object number will continue from the number of the deleted object.
-        if (reference != null && !CollectionUtils.isEmpty(rules)) {
+        if (reference != null && rules != null) {
             DocumentReference rightsStorageDocReference;
             EntityReference rightsClassReference;
             boolean storageDocIsPrefsDoc = false;
