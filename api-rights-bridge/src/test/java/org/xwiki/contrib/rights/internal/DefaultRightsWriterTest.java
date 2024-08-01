@@ -437,6 +437,9 @@ class DefaultRightsWriterTest extends AbstractRightsWriterTest
         // Clean all rights objects
         this.rightsWriter.saveRules(Collections.emptyList(), documentReference);
 
+        resultDoc =
+            this.oldcore.getSpyXWiki().getDocument(documentReference, this.oldcore.getXWikiContext());
+
         // check that the right object was removed
         assertEquals(0, resultDoc.getXObjects(DefaultRightsWriter.XWIKI_RIGHTS_CLASS).size());
     }
