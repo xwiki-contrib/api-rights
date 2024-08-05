@@ -27,6 +27,7 @@ import javax.inject.Named;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
 import org.xwiki.contrib.rights.RulesObjectWriter;
 import org.xwiki.contrib.rights.WritableSecurityRule;
 import org.xwiki.job.event.status.JobProgressManager;
@@ -67,6 +68,8 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -126,11 +129,23 @@ class DefaultRightsWriterTest extends AbstractRightsWriterTest
     }
 
     @Test
-    void saveWhenRuleIsNull() throws XWikiException
+    void saveWhenNoRuleTerminalPage() throws XWikiException
     {
         DocumentReference documentReference = new DocumentReference("xwiki", "S", "P");
         this.rightsWriter.saveRules(null, documentReference);
-        verify(this.oldcore.getSpyXWiki(), never()).getDocument(documentReference, this.oldcore.getXWikiContext());
+        verify(this.oldcore.getSpyXWiki(), never()).saveDocument(
+            argThat(d -> d.getDocumentReference().equals(documentReference)),
+            eq( this.oldcore.getXWikiContext()));
+    }
+
+    @Test
+    void saveWhenNoRuleNotTerminalPage() throws XWikiException
+    {
+        SpaceReference spaceReference = new SpaceReference("xwiki", "S", "P");
+        this.rightsWriter.saveRules(Collections.emptyList(), spaceReference);
+        verify(this.oldcore.getSpyXWiki(), never()).saveDocument(
+            argThat(d ->  d.getDocumentReference().getLastSpaceReference().equals(spaceReference)),
+            eq( this.oldcore.getXWikiContext()));
     }
 
     @Test
