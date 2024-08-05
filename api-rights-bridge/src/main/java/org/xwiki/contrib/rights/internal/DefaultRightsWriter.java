@@ -26,6 +26,7 @@ import javax.inject.Named;
 import javax.inject.Provider;
 import javax.inject.Singleton;
 
+import org.apache.commons.collections4.CollectionUtils;
 import org.xwiki.component.annotation.Component;
 import org.xwiki.component.manager.ComponentLookupException;
 import org.xwiki.component.manager.ComponentManager;
@@ -91,6 +92,7 @@ public class DefaultRightsWriter extends AbstractRightsWriter
     {
         // By deleting the objects, the object number will continue from the number of the deleted object.
         if (reference != null && rules != null) {
+            XWikiContext context = getXContext();
             DocumentReference rightsStorageDocReference;
             EntityReference rightsClassReference;
             boolean storageDocIsPrefsDoc = false;
@@ -106,6 +108,11 @@ public class DefaultRightsWriter extends AbstractRightsWriter
                         new SpaceReference(reference));
                     rightsClassReference = XWIKI_GLOBAL_RIGHTS_CLASS;
                     storageDocIsPrefsDoc = true;
+                    if (CollectionUtils.isEmpty(rules) && !getXWiki().exists(rightsStorageDocReference, context)) {
+                        // In case of no WebPreferences document, and we have no rights, we don't need to save any
+                        // document (as we don't have any right to remove
+                        return;
+                    }
                     break;
                 case DOCUMENT:
                     // The current reference corresponds to a terminal page.
@@ -116,7 +123,6 @@ public class DefaultRightsWriter extends AbstractRightsWriter
                     throw new UnsupportedOperationException("Could not set rights for the given reference.");
             }
             // get document to perform changes on
-            XWikiContext context = getXContext();
             XWikiDocument rightsStorageDoc = getXWiki().getDocument(rightsStorageDocReference, context).clone();
 
             // write objects according to the chosen strategy
