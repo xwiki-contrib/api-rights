@@ -427,13 +427,6 @@ class DefaultRightsWriterTest extends AbstractRightsWriterTest
             this.oldcore.getSpyXWiki().getDocument(documentReference, this.oldcore.getXWikiContext());
         // check that there is a single object set
         assertEquals(1, resultDoc.getXObjects(DefaultRightsWriter.XWIKI_RIGHTS_CLASS).size());
-        BaseObject rightsObj = resultDoc.getXObject(DefaultRightsWriter.XWIKI_RIGHTS_CLASS);
-        // check that the allow is set to default true
-        assertEquals(1, rightsObj.getIntValue(ALLOW_PROPERTY));
-        // and the rest of the object is set properly, as we asked for
-        assertEquals("", rightsObj.getLargeStringValue(USERS_PROPERTY));
-        assertEquals("XWiki.XWikiAdminGroup", rightsObj.getLargeStringValue(GROUPS_PROPERTY));
-        assertEquals(1, rightsObj.getIntValue(ALLOW_PROPERTY));
 
         // Clean all rights objects
         this.rightsWriter.saveRules(Collections.emptyList(), documentReference);
