@@ -91,7 +91,7 @@ public class DefaultRightsWriter extends AbstractRightsWriter
         throws XWikiException, UnsupportedOperationException
     {
         // By deleting the objects, the object number will continue from the number of the deleted object.
-        if (reference != null && !CollectionUtils.isEmpty(rules)) {
+        if (reference != null && rules != null) {
             DocumentReference rightsStorageDocReference;
             EntityReference rightsClassReference;
             boolean storageDocIsPrefsDoc = false;
@@ -134,7 +134,10 @@ public class DefaultRightsWriter extends AbstractRightsWriter
             if (rightsStorageDoc.isNew() && storageDocIsPrefsDoc) {
                 rightsStorageDoc.setHidden(true);
             }
-            getXWiki().saveDocument(rightsStorageDoc, context);
+            // Save document only if exist or if there are some rules
+            if (!(CollectionUtils.isEmpty(rules) && rightsStorageDoc.isNew())) {
+                getXWiki().saveDocument(rightsStorageDoc, context);
+            }
         }
     }
 

@@ -82,9 +82,11 @@ public interface RightsWriter
      * reference, use the {@link RightsReader} API to read the existing rules, then turn them into writable ones using
      * {@link RightsWriter#createRules(List)}, add a new rule and then persist them using this function. <br >
      * This function uses a default persistence strategy.
+     * Note that if {@code rules} or {@code reference} are null, this call will have no effect.
      *
      * @param rules the new rules to set for the passed reference. They will replace whatever existing rules are already
-     *            there. Writable rules can also be passed, since they are readable as well.
+     *            there. Writable rules can also be passed, since they are readable as well. An empty list will
+     *            remove all current rules.
      * @param reference the reference to update rules on. Can be a document or a space or a wiki.
      * @throws XWikiException in case something goes wrong during save on the passed XWiki entity
      * @throws UnsupportedOperationException if access rules cannot be saved at the level of the passed reference (the

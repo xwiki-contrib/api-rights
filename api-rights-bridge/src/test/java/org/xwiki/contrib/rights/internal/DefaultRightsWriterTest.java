@@ -27,6 +27,7 @@ import javax.inject.Named;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
 import org.xwiki.contrib.rights.RulesObjectWriter;
 import org.xwiki.contrib.rights.WritableSecurityRule;
 import org.xwiki.job.event.status.JobProgressManager;
@@ -62,10 +63,13 @@ import com.xpn.xwiki.test.junit5.mockito.InjectMockitoOldcore;
 import com.xpn.xwiki.test.junit5.mockito.OldcoreTest;
 import com.xpn.xwiki.test.reference.ReferenceComponentList;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -125,11 +129,23 @@ class DefaultRightsWriterTest extends AbstractRightsWriterTest
     }
 
     @Test
-    void saveWhenNoRule() throws XWikiException
+    void saveWhenNoRuleTerminalPage() throws XWikiException
     {
         DocumentReference documentReference = new DocumentReference("xwiki", "S", "P");
         this.rightsWriter.saveRules(Collections.emptyList(), documentReference);
-        verify(this.oldcore.getSpyXWiki(), never()).getDocument(documentReference, this.oldcore.getXWikiContext());
+        verify(this.oldcore.getSpyXWiki(), never()).saveDocument(
+            argThat(d -> d.getDocumentReference().equals(documentReference)),
+            eq( this.oldcore.getXWikiContext()));
+    }
+
+    @Test
+    void saveWhenNoRuleNotTerminalPage() throws XWikiException
+    {
+        SpaceReference spaceReference = new SpaceReference("xwiki", "S", "P");
+        this.rightsWriter.saveRules(Collections.emptyList(), spaceReference);
+        verify(this.oldcore.getSpyXWiki(), never()).saveDocument(
+            argThat(d ->  d.getDocumentReference().getLastSpaceReference().equals(spaceReference)),
+            eq( this.oldcore.getXWikiContext()));
     }
 
     @Test
@@ -407,6 +423,66 @@ class DefaultRightsWriterTest extends AbstractRightsWriterTest
         assertEquals("", rightsObj.getLargeStringValue(USERS_PROPERTY));
         assertEquals("XWiki.XWikiAdminGroup", rightsObj.getLargeStringValue(GROUPS_PROPERTY));
         assertEquals(1, rightsObj.getIntValue(ALLOW_PROPERTY));
+    }
+
+    @Test
+    void testSaveRuleWithEmptyRightsListOnTerminalPage() throws XWikiException
+    {
+        DocumentReference documentReference = new DocumentReference("xwiki", "S", "P");
+        // prepare rules to put on the document, with empty rights set
+        WritableSecurityRule rule = new WritableSecurityRuleImpl(
+            Collections.singletonList(new DocumentReference("xwiki", "XWiki", "XWikiAdminGroup")),
+            Collections.emptyList(), new RightSet(Right.VIEW), RuleState.ALLOW);
+
+        // call the function under test
+        this.rightsWriter.saveRules(Collections.singletonList(rule), documentReference);
+
+        // get the document that was just modified and assert on it
+        XWikiDocument resultDoc =
+            this.oldcore.getSpyXWiki().getDocument(documentReference, this.oldcore.getXWikiContext());
+        // check that there is a single object set
+        assertEquals(1, resultDoc.getXObjects(DefaultRightsWriter.XWIKI_RIGHTS_CLASS).size());
+
+        // Remove all access rule
+        this.rightsWriter.saveRules(Collections.emptyList(), documentReference);
+
+        resultDoc =
+            this.oldcore.getSpyXWiki().getDocument(documentReference, this.oldcore.getXWikiContext());
+
+        // check that the right object was removed
+        // Note the object still be in the map, but it's set to null.
+        assertNull(resultDoc.getXObject(DefaultRightsWriter.XWIKI_RIGHTS_CLASS));
+    }
+
+    @Test
+    void testSaveRuleWithEmptyRightsListOnNonTerminalPage() throws XWikiException
+    {
+        SpaceReference spaceReference = new SpaceReference("xwiki", "S", "P");
+        DocumentReference webPrefReference = new DocumentReference(RulesObjectWriter.XWIKI_WEB_PREFERENCES,
+            spaceReference);
+        // prepare rules to put on the document, with empty rights set
+        WritableSecurityRule rule = new WritableSecurityRuleImpl(
+            Collections.singletonList(new DocumentReference("xwiki", "XWiki", "XWikiAdminGroup")),
+            Collections.emptyList(), new RightSet(Right.VIEW), RuleState.ALLOW);
+
+        // call the function under test
+        this.rightsWriter.saveRules(Collections.singletonList(rule), spaceReference);
+
+        // get the document that was just modified and assert on it
+        XWikiDocument resultDoc =
+            this.oldcore.getSpyXWiki().getDocument(webPrefReference, this.oldcore.getXWikiContext());
+        // check that there is a single object set
+        assertEquals(1, resultDoc.getXObjects(DefaultRightsWriter.XWIKI_GLOBAL_RIGHTS_CLASS).size());
+
+        // Remove all access rule
+        this.rightsWriter.saveRules(Collections.emptyList(), spaceReference);
+
+        resultDoc =
+            this.oldcore.getSpyXWiki().getDocument(webPrefReference, this.oldcore.getXWikiContext());
+
+        // check that the right object was removed
+        // Note the object still be in the map, but it's set to null.
+        assertNull(resultDoc.getXObject(DefaultRightsWriter.XWIKI_RIGHTS_CLASS));
     }
 
     @Test
