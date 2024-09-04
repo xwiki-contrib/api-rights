@@ -27,7 +27,6 @@ import javax.inject.Named;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.Mockito;
 import org.xwiki.contrib.rights.RulesObjectWriter;
 import org.xwiki.contrib.rights.WritableSecurityRule;
 import org.xwiki.job.event.status.JobProgressManager;
@@ -68,12 +67,8 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.argThat;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.verify;
 
 /**
  * @version $Id$
@@ -129,23 +124,102 @@ class DefaultRightsWriterTest extends AbstractRightsWriterTest
     }
 
     @Test
-    void saveWhenNoRuleTerminalPage() throws XWikiException
+    void saveWhenNoRuleInexistentTerminalPage() throws XWikiException
     {
         DocumentReference documentReference = new DocumentReference("xwiki", "S", "P");
+
+        // document doesn't exist before
+        assertFalse(this.oldcore.getSpyXWiki().exists(documentReference, this.oldcore.getXWikiContext()));
+
+        // save empty list of rules on it
         this.rightsWriter.saveRules(Collections.emptyList(), documentReference);
-        verify(this.oldcore.getSpyXWiki(), never()).saveDocument(
-            argThat(d -> d.getDocumentReference().equals(documentReference)),
-            eq( this.oldcore.getXWikiContext()));
+
+        // check that the document does not get created following this call, as there is no rule to be added
+        assertFalse(this.oldcore.getSpyXWiki().exists(documentReference, this.oldcore.getXWikiContext()));
+
+        // save rules with null list
+        this.rightsWriter.saveRules(null, documentReference);
+
+        // check that the document is still not created following this call, as there is no rule to be added
+        assertFalse(this.oldcore.getSpyXWiki().exists(documentReference, this.oldcore.getXWikiContext()));
     }
 
     @Test
-    void saveWhenNoRuleNotTerminalPage() throws XWikiException
+    void saveWhenNoRuleExistentTerminalPage() throws XWikiException
     {
-        SpaceReference spaceReference = new SpaceReference("xwiki", "S", "P");
-        this.rightsWriter.saveRules(Collections.emptyList(), spaceReference);
-        verify(this.oldcore.getSpyXWiki(), never()).saveDocument(
-            argThat(d ->  d.getDocumentReference().getLastSpaceReference().equals(spaceReference)),
-            eq( this.oldcore.getXWikiContext()));
+        // This test is only for completion, to have all possible cases covered. Otherwise it's not really testing much...
+
+        // create a document that exists in the store
+        DocumentReference documentReference = new DocumentReference("xwiki", "S", "P");
+        XWikiDocument doc = this.oldcore.getSpyXWiki().getDocument(documentReference, this.oldcore.getXWikiContext());
+        this.oldcore.getSpyXWiki().saveDocument(doc, this.oldcore.getXWikiContext());
+
+        // document exists before
+        assertTrue(this.oldcore.getSpyXWiki().exists(documentReference, this.oldcore.getXWikiContext()));
+
+        // save empty list of rules on it
+        this.rightsWriter.saveRules(Collections.emptyList(), documentReference);
+
+        // document still exists after (how else?)
+        assertTrue(this.oldcore.getSpyXWiki().exists(documentReference, this.oldcore.getXWikiContext()));
+
+        // save rules with null list
+        this.rightsWriter.saveRules(Collections.emptyList(), documentReference);
+
+        // document still exists after (how else?)
+        assertTrue(this.oldcore.getSpyXWiki().exists(documentReference, this.oldcore.getXWikiContext()));
+    }
+
+    @Test
+    void saveWhenNoRuleInexistentNonTerminalPage() throws XWikiException
+    {
+        // create a non terminal page
+        DocumentReference nonTerminalPageRef = new DocumentReference("WebHome", new SpaceReference("xwiki", "S", "P"));
+        DocumentReference prefsPageRef = new DocumentReference("WebPreferences", nonTerminalPageRef.getLastSpaceReference());
+
+        // check that neither page nor preferences exist before
+        assertFalse(this.oldcore.getSpyXWiki().exists(nonTerminalPageRef, this.oldcore.getXWikiContext()));
+        assertFalse(this.oldcore.getSpyXWiki().exists(prefsPageRef, this.oldcore.getXWikiContext()));
+
+        // save empty list of rules on its parent (on the non-terminal entity)
+        this.rightsWriter.saveRules(Collections.emptyList(), nonTerminalPageRef.getParent());
+
+        //check that the preferences page is not created
+        assertFalse(this.oldcore.getSpyXWiki().exists(prefsPageRef, this.oldcore.getXWikiContext()));
+
+        // save rules with null list
+        this.rightsWriter.saveRules(Collections.emptyList(), nonTerminalPageRef.getParent());
+
+        //check that the preferences page is still not created
+        assertFalse(this.oldcore.getSpyXWiki().exists(prefsPageRef, this.oldcore.getXWikiContext()));
+    }
+
+    @Test
+    void saveWhenNoRuleExistentNonTerminalPage() throws XWikiException
+    {
+        // create a non terminal page
+        DocumentReference nonTerminalPageRef = new DocumentReference("WebHome", new SpaceReference("xwiki", "S", "P"));
+        DocumentReference prefsPageRef = new DocumentReference("WebPreferences", nonTerminalPageRef.getLastSpaceReference());
+
+        // save the non-terminal page
+        XWikiDocument nonTerminalDoc = this.oldcore.getSpyXWiki().getDocument(nonTerminalPageRef, this.oldcore.getXWikiContext());
+        this.oldcore.getSpyXWiki().saveDocument(nonTerminalDoc, this.oldcore.getXWikiContext());
+
+        // check that page exists but not its preferences
+        assertTrue(this.oldcore.getSpyXWiki().exists(nonTerminalPageRef, this.oldcore.getXWikiContext()));
+        assertFalse(this.oldcore.getSpyXWiki().exists(prefsPageRef, this.oldcore.getXWikiContext()));
+
+        // save empty list of rules on its parent (on the non-terminal entity)
+        this.rightsWriter.saveRules(Collections.emptyList(), nonTerminalPageRef.getParent());
+
+        //check that the preferences page is not created
+        assertFalse(this.oldcore.getSpyXWiki().exists(prefsPageRef, this.oldcore.getXWikiContext()));
+
+        // save rules with null list
+        this.rightsWriter.saveRules(Collections.emptyList(), nonTerminalPageRef.getParent());
+
+        //check that the preferences page is still not created
+        assertFalse(this.oldcore.getSpyXWiki().exists(prefsPageRef, this.oldcore.getXWikiContext()));
     }
 
     @Test
